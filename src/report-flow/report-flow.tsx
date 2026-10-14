@@ -18,11 +18,13 @@ export type ReportFlowState = {
   capture: Capture | null;
   detection: Detection | null;
   manualType: IncidentType | null;
+  /** Comentario opcional del ciudadano sobre la incidencia. */
+  description: string;
   /** Resultado del envío, para la pantalla de confirmación. */
   submitted: { id: string; createdAt: string } | null;
 };
 
-const EMPTY: ReportFlowState = { capture: null, detection: null, manualType: null, submitted: null };
+const EMPTY: ReportFlowState = { capture: null, detection: null, manualType: null, description: '', submitted: null };
 
 type ReportFlow = ReportFlowState & {
   update: (changes: Partial<ReportFlowState>) => void;
