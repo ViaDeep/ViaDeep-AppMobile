@@ -1,14 +1,15 @@
 {
   "expo": {
-    "name": "viadeep",
+    "name": "ViaDeep",
     "slug": "viadeep",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "viadeep",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "pe.viadeep.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "pe.viadeep.app"
     },
     "web": {
       "output": "static",
@@ -28,14 +30,28 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#1565C0",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "ViaDeep usa la cámara para fotografiar daños en la pista.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "ViaDeep usa tu ubicación para registrar dónde está el daño."
+        }
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
-      "typedRoutes": true,
       "reactCompiler": true
     }
   }
