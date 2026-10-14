@@ -24,3 +24,8 @@ export function validatePasswordChange(form: PasswordForm): string | null {
   if (form.next === form.current) return 'La nueva contraseña debe ser distinta de la actual.';
   return null;
 }
+
+/** Celular peruano de 9 dígitos en grupos de tres: 987 654 321. */
+export function formatPhone(phone: string): string {
+  return /^\d{9}$/.test(phone) ? phone.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3') : phone;
+}
