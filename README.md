@@ -5,26 +5,38 @@ Hecha con React Native + Expo (SDK 57) y Expo Router.
 
 ## Qué hace hoy
 
-- Registro e inicio de sesión contra `auth-service` (el token JWT se guarda cifrado con `expo-secure-store`).
-- Nuevo reporte: foto con la cámara, ubicación GPS, tipo de daño, descripción opcional y envío
-  (la foto va a `evidence-service` y el reporte a `incident-service`).
-- Lista "Mis reportes" y detalle con la foto, el estado y el historial.
+El diseño sigue los mockups de Figma del proyecto (colores, tipografías Inter y JetBrains Mono, íconos Material).
 
-La detección con LMD-YOLO todavía no está integrada: `src/inference/inference-engine.ts` define el punto
-donde se conectará el modelo ONNX. Mientras tanto la app usa el flujo manual (el ciudadano elige el tipo
-de daño), que es el mismo que se usará cuando la confianza del modelo sea baja.
+- Login y registro contra `auth-service` (el token JWT se guarda cifrado con `expo-secure-store`).
+- Barra inferior con Inicio, Reportar, Mis reportes, Notificaciones y Perfil.
+- Reporte en 4 pasos: cámara (con GPS, flash, linterna y galería), vista previa, resultado del análisis y
+  confirmación. La foto va a `evidence-service` y el reporte a `incident-service`.
+- Mis reportes con filtros por estado, búsqueda y miniatura; detalle con la foto, la caja de detección y
+  el estado en 4 fases.
+- Notificaciones armadas a partir del historial de cada reporte (el backend aún no tiene servicio de avisos).
+
+La detección con LMD-YOLO todavía no está integrada: `src/inference/engine.ts` es el punto donde se
+conectará el modelo ONNX. Mientras tanto la app muestra "MODO MANUAL" y el ciudadano elige el tipo de daño,
+que es el mismo flujo que se usa cuando la confianza del modelo es baja.
+
+Botones del diseño que aún no tienen backend (DNIe, recuperar contraseña, editar perfil, constancia
+digital, preferencias de avisos) muestran el aviso "disponible próximamente".
 
 ## Estructura
 
 | Carpeta | Contenido |
 | --- | --- |
-| `src/app/` | Pantallas (Expo Router). `(app)/` agrupa las que requieren sesión. |
+| `src/app/` | Pantallas (Expo Router). `(app)/` agrupa las que requieren sesión y `(app)/(tabs)/` las de la barra inferior. |
 | `src/api/` | Clientes HTTP de cada microservicio. |
 | `src/session/` | Sesión del usuario y almacenamiento seguro del token. |
-| `src/services/` | Lógica del envío de reportes (con pruebas). |
+| `src/reports/` | Reportes del ciudadano compartidos entre pestañas. |
+| `src/report-flow/` | Datos del reporte en curso entre los 4 pasos. |
+| `src/notifications/` | Avisos derivados del historial de los reportes (con pruebas). |
+| `src/services/` | Envío de reportes y ubicación (con pruebas). |
 | `src/inference/` | Puerto de inferencia on-device (LMD-YOLO). |
-| `src/domain/` | Tipos y etiquetas en español de incidencias. |
-| `src/ui/` | Componentes visuales reutilizables. |
+| `src/domain/` | Tipos, etiquetas en español, estados y códigos de reporte (con pruebas). |
+| `src/components/` | Tarjetas de reporte y foto con datos superpuestos. |
+| `src/ui/` | Componentes visuales base (botones, campos, etiquetas, cabeceras). |
 
 ## Probar la app en tu celular
 
