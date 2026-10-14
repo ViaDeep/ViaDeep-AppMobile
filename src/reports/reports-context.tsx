@@ -2,8 +2,14 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { incidentApi } from '@/api/incident-api';
+import { notificationApi, type ApiNotification } from '@/api/notification-api';
 import type { IncidentDetail } from '@/domain/incident';
-import { buildNotifications, type AppNotification, type NotificationKind } from '@/notifications/build-notifications';
+import {
+  buildNotifications,
+  mergeNotifications,
+  type AppNotification,
+  type NotificationKind,
+} from '@/notifications/build-notifications';
 import { applyPreferences, DEFAULT_PREFERENCES, parsePreferences, type NotificationPreferences } from '@/notifications/preferences';
 
 const SEEN_KEY = 'viadeep.notificationsSeenAt';
@@ -19,6 +25,7 @@ type ReportsState = {
   notifications: AppNotification[];
   unreadCount: number;
   refresh: (force?: boolean) => Promise<void>;
+  markRead: (item: AppNotification) => void;
   markAllRead: () => Promise<void>;
   preferences: NotificationPreferences;
   setPreference: (kind: NotificationKind, enabled: boolean) => void;
@@ -26,13 +33,15 @@ type ReportsState = {
 
 const ReportsContext = createContext<ReportsState | null>(null);
 
-/** Reportes del ciudadano y avisos derivados de ellos, compartidos por todas las pestañas. */
+/** Reportes del ciudadano y sus avisos, compartidos por todas las pestañas. */
 export function ReportsProvider({ children }: { children: ReactNode }) {
   const [reports, setReports] = useState<IncidentDetail[]>([]);
   const [totalReports, setTotalReports] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seenAt, setSeenAt] = useState<string | null>(null);
+  /** null si el servicio de notificaciones no respondió: entonces los avisos se arman en el celular. */
+  const [serverNotifications, setServerNotifications] = useState<ApiNotification[] | null>(null);
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
   const lastLoad = useRef(0);
 
@@ -49,6 +58,10 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     if (!force && Date.now() - lastLoad.current < MIN_REFRESH_MS) return;
     lastLoad.current = Date.now();
     setLoading(true);
+    const notificationsRequest = notificationApi
+      .list(0, 100)
+      .then((page) => setServerNotifications(page.items))
+      .catch(() => setServerNotifications(null));
     try {
       const page = await incidentApi.mine(0, 50);
       // El listado no trae la foto ni el historial, así que se pide el detalle de cada reporte.
@@ -59,14 +72,28 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudieron cargar tus reportes.');
     } finally {
+      await notificationsRequest;
       setLoading(false);
     }
+  }, []);
+
+  const markRead = useCallback((item: AppNotification) => {
+    const serverId = item.serverId;
+    if (!serverId || !item.unread) return;
+    setServerNotifications((current) =>
+      current ? current.map((entry) => (entry.id === serverId ? { ...entry, read: true } : entry)) : current,
+    );
+    notificationApi.markRead(serverId).catch(() => undefined);
   }, []);
 
   const markAllRead = useCallback(async () => {
     const now = new Date().toISOString();
     setSeenAt(now);
-    await SecureStore.setItemAsync(SEEN_KEY, now).catch(() => undefined);
+    setServerNotifications((current) => (current ? current.map((entry) => ({ ...entry, read: true })) : current));
+    await Promise.all([
+      SecureStore.setItemAsync(SEEN_KEY, now).catch(() => undefined),
+      notificationApi.markAllRead().catch(() => undefined),
+    ]);
   }, []);
 
   const setPreference = useCallback((kind: NotificationKind, enabled: boolean) => {
@@ -78,8 +105,14 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const notifications = useMemo(
-    () => applyPreferences(buildNotifications(reports, seenAt), preferences),
-    [reports, seenAt, preferences],
+    () =>
+      applyPreferences(
+        serverNotifications
+          ? mergeNotifications(reports, serverNotifications, seenAt)
+          : buildNotifications(reports, seenAt),
+        preferences,
+      ),
+    [reports, serverNotifications, seenAt, preferences],
   );
   const unreadCount = notifications.filter((item) => item.unread).length;
 
@@ -92,11 +125,12 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
       notifications,
       unreadCount,
       refresh,
+      markRead,
       markAllRead,
       preferences,
       setPreference,
     }),
-    [reports, totalReports, loading, error, notifications, unreadCount, refresh, markAllRead, preferences, setPreference],
+    [reports, totalReports, loading, error, notifications, unreadCount, refresh, markRead, markAllRead, preferences, setPreference],
   );
   return <ReportsContext.Provider value={value}>{children}</ReportsContext.Provider>;
 }
