@@ -43,7 +43,7 @@ digital, preferencias de avisos) muestran el aviso "disponible próximamente".
 Necesitas Node.js 20 o superior y la app **Expo Go** instalada en el celular Android (Play Store).
 La PC y el celular deben estar en la **misma red Wi-Fi**.
 
-1. Levanta el backend (repositorio ViaDeep-backend): `docker compose up -d` y luego los servicios
+   auth (8081), incidents (8082), evidences (8083) y notifications (8084).
    auth (8081), incidents (8082) y evidences (8083).
    Para que el celular pueda ver las fotos, inicia `evidence-service` con
    `S3_ENDPOINT=http://<IP-de-tu-PC>:9000`.
