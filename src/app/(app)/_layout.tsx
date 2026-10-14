@@ -32,6 +32,7 @@ export default function ProtectedLayout() {
           <Stack.Screen name="report/confirmation" options={{ gestureEnabled: false }} />
           <Stack.Screen name="report/[id]" />
           <Stack.Screen name="settings/edit-profile" />
+          <Stack.Screen name="settings/personal-data" />
           <Stack.Screen name="settings/notifications" />
           <Stack.Screen name="settings/privacy" />
           <Stack.Screen name="settings/help" />
