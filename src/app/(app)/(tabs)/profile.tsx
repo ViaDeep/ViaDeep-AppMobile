@@ -7,7 +7,6 @@ import { colors, fonts } from '@/constants/theme';
 import { initials } from '@/domain/display';
 import { useReports } from '@/reports/reports-context';
 import { useSession } from '@/session/session-context';
-import { comingSoon } from '@/ui/coming-soon';
 import { Icon, type IconName } from '@/ui/icon';
 import { BrandHeader } from '@/ui/top-bar';
 
@@ -26,10 +25,10 @@ export default function ProfileScreen() {
   const resolved = reports.filter((incident) => incident.status === 'RESOLVED').length;
 
   const menu: MenuItem[] = [
-    { icon: 'badge', title: 'Datos personales', subtitle: 'Nombre, DNI, teléfono y dirección', onPress: () => comingSoon('Datos personales') },
-    { icon: 'notifications-none', title: 'Notificaciones', subtitle: 'Alertas de estado de incidencias', onPress: () => router.navigate('/notifications') },
-    { icon: 'privacy-tip', title: 'Privacidad', subtitle: 'Permisos de ubicación y telemetría', onPress: () => comingSoon('Privacidad') },
-    { icon: 'help-outline', title: 'Ayuda y soporte', subtitle: 'Manual cívico y mesa de ayuda MML', onPress: () => comingSoon('Ayuda y soporte') },
+    { icon: 'badge', title: 'Datos personales', subtitle: 'Nombre, DNI, celular y contraseña', onPress: () => router.push('/settings/edit-profile') },
+    { icon: 'notifications-none', title: 'Notificaciones', subtitle: 'Alertas de estado de incidencias', onPress: () => router.push('/settings/notifications') },
+    { icon: 'privacy-tip', title: 'Privacidad', subtitle: 'Permisos de cámara y ubicación, uso de datos', onPress: () => router.push('/settings/privacy') },
+    { icon: 'help-outline', title: 'Ayuda y soporte', subtitle: 'Manual cívico y preguntas frecuentes', onPress: () => router.push('/settings/help') },
   ];
 
   function confirmSignOut() {
@@ -60,7 +59,7 @@ export default function ProfileScreen() {
             <Icon name="verified-user" size={12} color={colors.textSecondary} />
             <Text style={styles.citizenTagText}>Ciudadano Registrado · Lima Metropolitana</Text>
           </View>
-          <Pressable onPress={() => comingSoon('Editar perfil')} style={({ pressed }) => [styles.edit, pressed && styles.pressed]}>
+          <Pressable onPress={() => router.push('/settings/edit-profile')} style={({ pressed }) => [styles.edit, pressed && styles.pressed]}>
             <Icon name="edit" size={13} color={colors.text} />
             <Text style={styles.editText}>Editar perfil</Text>
           </Pressable>
