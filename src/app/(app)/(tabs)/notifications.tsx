@@ -7,7 +7,6 @@ import { colors, fonts } from '@/constants/theme';
 import { CITIZEN_STATUS_LABELS, dayAndClock, formatDateTime, relativeTime } from '@/domain/display';
 import type { AppNotification, NotificationKind } from '@/notifications/build-notifications';
 import { useReports } from '@/reports/reports-context';
-import { comingSoon } from '@/ui/coming-soon';
 import { Icon, type IconName } from '@/ui/icon';
 import { StatusBadge } from '@/ui/status-badge';
 
@@ -94,7 +93,7 @@ export default function NotificationsScreen() {
           </View>
         ) : null}
 
-        <Pressable onPress={() => comingSoon('Preferencias de avisos')} style={styles.preferences}>
+        <Pressable onPress={() => router.push('/settings/notifications')} style={styles.preferences}>
           <View style={styles.inline}>
             <Icon name="settings" size={17} color={colors.textStrong} />
             <Text style={styles.preferencesText}>Gestionar alertas y preferencias de avisos</Text>
