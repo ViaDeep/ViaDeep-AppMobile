@@ -25,7 +25,7 @@ export default function ProfileScreen() {
   const resolved = reports.filter((incident) => incident.status === 'RESOLVED').length;
 
   const menu: MenuItem[] = [
-    { icon: 'badge', title: 'Datos personales', subtitle: 'Nombre, DNI, celular y contraseña', onPress: () => router.push('/settings/edit-profile') },
+    { icon: 'badge', title: 'Datos personales', subtitle: 'Nombre, correo, celular y DNI', onPress: () => router.push('/settings/personal-data') },
     { icon: 'notifications-none', title: 'Notificaciones', subtitle: 'Alertas de estado de incidencias', onPress: () => router.push('/settings/notifications') },
     { icon: 'privacy-tip', title: 'Privacidad', subtitle: 'Permisos de cámara y ubicación, uso de datos', onPress: () => router.push('/settings/privacy') },
     { icon: 'help-outline', title: 'Ayuda y soporte', subtitle: 'Manual cívico y preguntas frecuentes', onPress: () => router.push('/settings/help') },
