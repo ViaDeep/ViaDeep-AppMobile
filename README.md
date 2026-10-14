@@ -53,8 +53,10 @@ La PC y el celular deben estar en la **misma red Wi-Fi**.
 
    ```bash
    npm install
-   npx expo start
+   npm start
    ```
+
+   `npm start` abre Expo en el puerto 8090, porque del 8081 al 8084 los usa el backend.
 
 5. Escanea el código QR con Expo Go. Si Windows pregunta por el firewall, permite el acceso en redes privadas
    (para Java y para Node).
