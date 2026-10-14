@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0F2042",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -30,7 +30,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1565C0",
+          "backgroundColor": "#0F2042",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
@@ -49,7 +49,15 @@
           "locationWhenInUsePermission": "ViaDeep usa tu ubicación para registrar dónde está el daño."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ViaDeep usa tu galería para adjuntar la foto de un daño en la pista.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "reactCompiler": true
