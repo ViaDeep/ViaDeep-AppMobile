@@ -20,7 +20,7 @@ const LOOKS: Record<NotificationKind, Look> = {
 };
 
 export default function NotificationsScreen() {
-  const { notifications, unreadCount, loading, refresh, markAllRead } = useReports();
+  const { notifications, unreadCount, loading, refresh, markRead, markAllRead } = useReports();
   const [onlyUnread, setOnlyUnread] = useState(false);
 
   useFocusEffect(
@@ -80,11 +80,11 @@ export default function NotificationsScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={() => refresh(true)} />}>
         {recent.length > 0 ? <Divider label="HOY · EN TIEMPO REAL" /> : null}
         {recent.map((item) => (
-          <NotificationCard key={item.id} item={item} />
+          <NotificationCard key={item.id} item={item} onOpen={markRead} />
         ))}
         {older.length > 0 ? <Divider label="ANTERIORES" /> : null}
         {older.map((item) => (
-          <NotificationCard key={item.id} item={item} />
+          <NotificationCard key={item.id} item={item} onOpen={markRead} />
         ))}
         {visible.length === 0 && !loading ? (
           <View style={styles.empty}>
@@ -114,7 +114,7 @@ function Divider({ label }: { label: string }) {
   );
 }
 
-function NotificationCard({ item }: { item: AppNotification }) {
+function NotificationCard({ item, onOpen }: { item: AppNotification; onOpen: (item: AppNotification) => void }) {
   const look = LOOKS[item.kind];
   const today = new Date(item.at).toDateString() === new Date().toDateString();
   const time = today ? `Hoy · ${relativeTime(item.at)}` : item.kind === 'REGISTERED' ? formatDateTime(item.at) : dayAndClock(item.at);
@@ -122,7 +122,10 @@ function NotificationCard({ item }: { item: AppNotification }) {
 
   return (
     <Pressable
-      onPress={() => router.push(`/report/${item.incidentId}`)}
+      onPress={() => {
+        onOpen(item);
+        router.push(`/report/${item.incidentId}`);
+      }}
       style={({ pressed }) => [styles.card, item.unread ? styles.cardUnread : styles.cardRead, pressed && styles.pressed]}>
       <View style={[styles.icon, { backgroundColor: look.background }, look.border ? { borderWidth: 1, borderColor: look.border } : null]}>
         <Icon name={look.icon} size={18} color={look.color} />
