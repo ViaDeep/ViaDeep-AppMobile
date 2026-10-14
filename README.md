@@ -43,7 +43,7 @@ digital, preferencias de avisos) muestran el aviso "disponible próximamente".
 Necesitas Node.js 20 o superior y la app **Expo Go** instalada en el celular Android (Play Store).
 La PC y el celular deben estar en la **misma red Wi-Fi**.
 
-1. Levanta el backend (repositorio ViaDeep-backend): `docker compose up -d` y luego los servicios
+   auth (8081), incidents (8082), evidences (8083) y notifications (8084).
    auth (8081), incidents (8082) y evidences (8083).
    Para que el celular pueda ver las fotos, inicia `evidence-service` con
    `S3_ENDPOINT=http://<IP-de-tu-PC>:9000`.
@@ -53,8 +53,10 @@ La PC y el celular deben estar en la **misma red Wi-Fi**.
 
    ```bash
    npm install
-   npx expo start
+   npm start
    ```
+
+   `npm start` abre Expo en el puerto 8090, porque del 8081 al 8084 los usa el backend.
 
 5. Escanea el código QR con Expo Go. Si Windows pregunta por el firewall, permite el acceso en redes privadas
    (para Java y para Node).
