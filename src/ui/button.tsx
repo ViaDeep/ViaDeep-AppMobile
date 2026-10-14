@@ -1,32 +1,66 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '@/constants/theme';
+import { colors, fonts, radius } from '@/constants/theme';
+
+import { Icon, type IconName } from './icon';
+
+type Variant = 'navy' | 'primary' | 'outline';
 
 type Props = {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: Variant;
+  icon?: IconName;
+  /** El ícono va a la izquierda salvo las flechas de "continuar". */
+  iconPosition?: 'left' | 'right';
+  size?: 'md' | 'sm';
   loading?: boolean;
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function Button({ title, onPress, variant = 'primary', loading = false, disabled = false }: Props) {
+const PALETTE: Record<Variant, { background: string; text: string; border?: string }> = {
+  navy: { background: colors.navy, text: colors.white },
+  primary: { background: colors.primary, text: colors.white },
+  outline: { background: colors.surface, text: colors.text, border: colors.border },
+};
+
+export function Button({
+  title,
+  onPress,
+  variant = 'navy',
+  icon,
+  iconPosition = 'left',
+  size = 'md',
+  loading = false,
+  disabled = false,
+  style,
+}: Props) {
+  const palette = PALETTE[variant];
   const inactive = disabled || loading;
-  const primary = variant === 'primary';
+  const iconNode = icon ? <Icon name={icon} size={size === 'sm' ? 16 : 18} color={palette.text} /> : null;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: inactive }}
       onPress={onPress}
       disabled={inactive}
       style={({ pressed }) => [
         styles.base,
-        primary ? styles.primary : styles.secondary,
+        size === 'sm' && styles.small,
+        { backgroundColor: palette.background },
+        palette.border ? { borderWidth: 1, borderColor: palette.border } : null,
         (pressed || inactive) && styles.dimmed,
+        style,
       ]}>
       {loading ? (
-        <ActivityIndicator color={primary ? colors.primaryText : colors.primary} />
+        <ActivityIndicator color={palette.text} />
       ) : (
-        <Text style={[styles.label, { color: primary ? colors.primaryText : colors.primary }]}>{title}</Text>
+        <>
+          {iconPosition === 'left' && iconNode}
+          <Text style={[styles.label, size === 'sm' && styles.labelSmall, { color: palette.text }]}>{title}</Text>
+          {iconPosition === 'right' && iconNode}
+        </>
       )}
     </Pressable>
   );
@@ -34,14 +68,16 @@ export function Button({ title, onPress, variant = 'primary', loading = false, d
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
+    height: 48,
     borderRadius: radius.md,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    gap: 8,
+    paddingHorizontal: 16,
   },
-  primary: { backgroundColor: colors.primary },
-  secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary },
+  small: { height: 40 },
   dimmed: { opacity: 0.6 },
-  label: { fontSize: 16, fontWeight: '600' },
+  label: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 22 },
+  labelSmall: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16 },
 });
