@@ -1,4 +1,4 @@
-import { validatePasswordChange, validateProfile } from '../profile';
+import { formatPhone, validatePasswordChange, validateProfile } from '../profile';
 
 describe('validateProfile', () => {
   it('acepta nombre solo o con celular y DNI válidos', () => {
@@ -22,5 +22,15 @@ describe('validatePasswordChange', () => {
     expect(validatePasswordChange({ current: 'actual123', next: 'nueva1234', confirm: 'nueva12345' })).toMatch(/no coincide/);
     expect(validatePasswordChange({ current: 'actual123', next: 'actual123', confirm: 'actual123' })).toMatch(/distinta/);
     expect(validatePasswordChange({ current: 'actual123', next: 'nueva1234', confirm: 'nueva1234' })).toBeNull();
+  });
+});
+
+describe('formatPhone', () => {
+  it('agrupa un celular de 9 dígitos de tres en tres', () => {
+    expect(formatPhone('987654321')).toBe('987 654 321');
+  });
+
+  it('deja igual un número con otro formato', () => {
+    expect(formatPhone('12345')).toBe('12345');
   });
 });
