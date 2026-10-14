@@ -3,9 +3,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { incidentApi } from '@/api/incident-api';
 import type { IncidentDetail } from '@/domain/incident';
-import { buildNotifications, type AppNotification } from '@/notifications/build-notifications';
+import { buildNotifications, type AppNotification, type NotificationKind } from '@/notifications/build-notifications';
+import { applyPreferences, DEFAULT_PREFERENCES, parsePreferences, type NotificationPreferences } from '@/notifications/preferences';
 
 const SEEN_KEY = 'viadeep.notificationsSeenAt';
+const PREFERENCES_KEY = 'viadeep.notificationPreferences';
 /** Evita repetir la consulta cuando el usuario cambia de pestaña muy seguido. */
 const MIN_REFRESH_MS = 5000;
 
@@ -18,6 +20,8 @@ type ReportsState = {
   unreadCount: number;
   refresh: (force?: boolean) => Promise<void>;
   markAllRead: () => Promise<void>;
+  preferences: NotificationPreferences;
+  setPreference: (kind: NotificationKind, enabled: boolean) => void;
 };
 
 const ReportsContext = createContext<ReportsState | null>(null);
@@ -29,11 +33,15 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seenAt, setSeenAt] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFERENCES);
   const lastLoad = useRef(0);
 
   useEffect(() => {
     SecureStore.getItemAsync(SEEN_KEY)
       .then(setSeenAt)
+      .catch(() => undefined);
+    SecureStore.getItemAsync(PREFERENCES_KEY)
+      .then((raw) => setPreferences(parsePreferences(raw)))
       .catch(() => undefined);
   }, []);
 
@@ -61,12 +69,34 @@ export function ReportsProvider({ children }: { children: ReactNode }) {
     await SecureStore.setItemAsync(SEEN_KEY, now).catch(() => undefined);
   }, []);
 
-  const notifications = useMemo(() => buildNotifications(reports, seenAt), [reports, seenAt]);
+  const setPreference = useCallback((kind: NotificationKind, enabled: boolean) => {
+    setPreferences((current) => {
+      const next = { ...current, [kind]: enabled };
+      SecureStore.setItemAsync(PREFERENCES_KEY, JSON.stringify(next)).catch(() => undefined);
+      return next;
+    });
+  }, []);
+
+  const notifications = useMemo(
+    () => applyPreferences(buildNotifications(reports, seenAt), preferences),
+    [reports, seenAt, preferences],
+  );
   const unreadCount = notifications.filter((item) => item.unread).length;
 
   const value = useMemo(
-    () => ({ reports, totalReports, loading, error, notifications, unreadCount, refresh, markAllRead }),
-    [reports, totalReports, loading, error, notifications, unreadCount, refresh, markAllRead],
+    () => ({
+      reports,
+      totalReports,
+      loading,
+      error,
+      notifications,
+      unreadCount,
+      refresh,
+      markAllRead,
+      preferences,
+      setPreference,
+    }),
+    [reports, totalReports, loading, error, notifications, unreadCount, refresh, markAllRead, preferences, setPreference],
   );
   return <ReportsContext.Provider value={value}>{children}</ReportsContext.Provider>;
 }
