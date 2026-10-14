@@ -10,6 +10,8 @@ type SessionState = {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Reemplaza los datos del usuario después de editar el perfil. */
+  updateUser: (user: User) => void;
 };
 
 const SessionContext = createContext<SessionState | null>(null);
@@ -65,7 +67,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUser(me);
   }, []);
 
-  const value = useMemo(() => ({ loading, user, signIn, signOut }), [loading, user, signIn, signOut]);
+  const updateUser = useCallback((next: User) => setUser(next), []);
+
+  const value = useMemo(
+    () => ({ loading, user, signIn, signOut, updateUser }),
+    [loading, user, signIn, signOut, updateUser],
+  );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
