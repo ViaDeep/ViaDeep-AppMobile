@@ -38,11 +38,12 @@ export function createClient(baseURL: string): AxiosInstance {
   return client;
 }
 
-/** Error con un mensaje listo para mostrar al usuario. */
+/** Error con un mensaje listo para mostrar al usuario. network es true si no hubo respuesta del servidor. */
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    readonly network = false,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -64,11 +65,16 @@ export function toApiError(error: unknown): ApiError {
   }
   if (isAxiosError(error)) {
     if (!error.response) {
-      return new ApiError('No se pudo conectar con el servidor. Revisa tu conexión.');
+      return new ApiError('No se pudo conectar con el servidor. Revisa tu conexión.', undefined, true);
     }
     const status = error.response.status;
     const data = error.response.data as { detail?: string } | undefined;
     return new ApiError(MESSAGES_BY_STATUS[status] ?? data?.detail ?? 'Ocurrió un error inesperado.', status);
   }
   return new ApiError('Ocurrió un error inesperado.');
+}
+
+/** true si la operación falló porque no hubo conexión con el servidor (y no porque el servidor la rechazó). */
+export function isNetworkError(error: unknown): boolean {
+  return error instanceof ApiError && error.network;
 }

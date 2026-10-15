@@ -38,7 +38,7 @@ export const evidenceApi = {
       });
     } catch (error) {
       const reason = error instanceof Error ? ` (${error.message})` : '';
-      throw new ApiError(`No se pudo subir la foto. Revisa tu conexión.${reason}`);
+      throw new ApiError(`No se pudo subir la foto. Revisa tu conexión.${reason}`, undefined, true);
     }
     if (response.status === 401) {
       notifyUnauthorized();

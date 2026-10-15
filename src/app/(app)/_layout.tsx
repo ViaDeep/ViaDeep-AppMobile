@@ -2,6 +2,7 @@ import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
+import { PendingReportsProvider } from '@/offline/pending-reports-context';
 import { ReportFlowProvider } from '@/report-flow/report-flow';
 import { ReportsProvider } from '@/reports/reports-context';
 import { useSession } from '@/session/session-context';
@@ -23,21 +24,23 @@ export default function ProtectedLayout() {
 
   return (
     <ReportsProvider>
-      <ReportFlowProvider>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="report/camera" options={{ contentStyle: { backgroundColor: colors.text } }} />
-          <Stack.Screen name="report/preview" />
-          <Stack.Screen name="report/result" />
-          <Stack.Screen name="report/confirmation" options={{ gestureEnabled: false }} />
-          <Stack.Screen name="report/[id]" />
-          <Stack.Screen name="settings/edit-profile" />
-          <Stack.Screen name="settings/personal-data" />
-          <Stack.Screen name="settings/notifications" />
-          <Stack.Screen name="settings/privacy" />
-          <Stack.Screen name="settings/help" />
-        </Stack>
-      </ReportFlowProvider>
+      <PendingReportsProvider>
+        <ReportFlowProvider>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="report/camera" options={{ contentStyle: { backgroundColor: colors.text } }} />
+            <Stack.Screen name="report/preview" />
+            <Stack.Screen name="report/result" />
+            <Stack.Screen name="report/confirmation" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="report/[id]" />
+            <Stack.Screen name="settings/edit-profile" />
+            <Stack.Screen name="settings/personal-data" />
+            <Stack.Screen name="settings/notifications" />
+            <Stack.Screen name="settings/privacy" />
+            <Stack.Screen name="settings/help" />
+          </Stack>
+        </ReportFlowProvider>
+      </PendingReportsProvider>
     </ReportsProvider>
   );
 }

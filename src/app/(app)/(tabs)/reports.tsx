@@ -3,10 +3,12 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PendingReportCard } from '@/components/pending-report-card';
 import { placeLabel, ReportListCard } from '@/components/report-cards';
 import { colors, fonts } from '@/constants/theme';
 import { citizenStatus, reportCode, type CitizenStatus } from '@/domain/display';
 import { TYPE_LABELS, type IncidentDetail } from '@/domain/incident';
+import { usePendingReports } from '@/offline/pending-reports-context';
 import { useReports } from '@/reports/reports-context';
 import { Icon } from '@/ui/icon';
 import { BrandHeader } from '@/ui/top-bar';
@@ -25,6 +27,7 @@ const statusOf = (incident: IncidentDetail) => citizenStatus(incident.status, in
 
 export default function MyReportsScreen() {
   const { reports, loading, error, refresh } = useReports();
+  const { pending, send, discard } = usePendingReports();
   const [filter, setFilter] = useState<Filter>('ALL');
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
@@ -48,6 +51,16 @@ export default function MyReportsScreen() {
   }, [reports, filter, query, oldestFirst]);
 
   const active = reports.filter((incident) => !['RESOLVED', 'REJECTED'].includes(statusOf(incident))).length;
+
+  async function sendPending(localId: string) {
+    try {
+      const id = await send(localId);
+      void refresh(true);
+      Alert.alert('Reporte enviado', `Tu incidencia fue registrada con el código ${reportCode(id, new Date().toISOString())}.`);
+    } catch (e) {
+      Alert.alert('No se pudo enviar', e instanceof Error ? e.message : 'Intenta de nuevo cuando tengas conexión.');
+    }
+  }
 
   function chooseOrder() {
     Alert.alert('Ordenar reportes', undefined, [
@@ -134,6 +147,16 @@ export default function MyReportsScreen() {
               <Text style={styles.summaryTag}>LIMA METRO</Text>
             </View>
             {error ? <Text style={styles.error}>{error}</Text> : null}
+            {pending.length > 0 ? (
+              <View style={styles.pending}>
+                <Text style={styles.pendingTitle}>
+                  {pending.length === 1 ? '1 reporte pendiente de envío' : `${pending.length} reportes pendientes de envío`}
+                </Text>
+                {pending.map((report) => (
+                  <PendingReportCard key={report.localId} report={report} onSend={sendPending} onDiscard={discard} />
+                ))}
+              </View>
+            ) : null}
           </View>
         }
         ListEmptyComponent={
@@ -217,6 +240,8 @@ const styles = StyleSheet.create({
   summaryText: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, color: colors.text },
   summaryTag: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.5, color: colors.textSecondary },
   error: { fontFamily: fonts.medium, fontSize: 13, color: colors.danger },
+  pending: { gap: 8 },
+  pendingTitle: { fontFamily: fonts.semibold, fontSize: 13, lineHeight: 18, color: colors.text },
   empty: { alignItems: 'center', gap: 8, paddingVertical: 40 },
   emptyText: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
 });
