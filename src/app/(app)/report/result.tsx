@@ -4,6 +4,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { evidenceApi } from '@/api/evidence-api';
+import { isNetworkError } from '@/api/http';
 import { incidentApi } from '@/api/incident-api';
 import { PhotoHud } from '@/components/photo-hud';
 import { env } from '@/config/env';
@@ -11,6 +12,7 @@ import { colors, fonts } from '@/constants/theme';
 import { dayAndClock, formatCoordinates, longDate } from '@/domain/display';
 import { INCIDENT_TYPES, TYPE_LABELS, type IncidentType } from '@/domain/incident';
 import { TYPE_ICONS } from '@/domain/type-icons';
+import { usePendingReports } from '@/offline/pending-reports-context';
 import { useReportFlow } from '@/report-flow/report-flow';
 import { useReports } from '@/reports/reports-context';
 import { acceptedDetection, DESCRIPTION_MAX_LENGTH, submitReport } from '@/services/report-service';
@@ -22,6 +24,7 @@ import { BackHeader } from '@/ui/top-bar';
 export default function ResultScreen() {
   const flow = useReportFlow();
   const { refresh } = useReports();
+  const pendingReports = usePendingReports();
   const [sending, setSending] = useState(false);
   const { capture } = flow;
 
@@ -53,10 +56,40 @@ export default function ResultScreen() {
       router.dismissAll();
       router.push('/report/confirmation');
     } catch (e) {
-      Alert.alert('No se pudo enviar', e instanceof Error ? e.message : 'Intenta de nuevo.');
+      if (isNetworkError(e)) {
+        await saveForLater();
+      } else {
+        Alert.alert('No se pudo enviar', e instanceof Error ? e.message : 'Intenta de nuevo.');
+      }
     } finally {
       setSending(false);
     }
+  }
+
+  /** Sin conexión el reporte se guarda en el celular para enviarlo desde "Mis reportes". */
+  async function saveForLater() {
+    if (!capture) return;
+    try {
+      await pendingReports.save({
+        photoUri: capture.photoUri,
+        coordinates: capture.coordinates,
+        address: capture.address,
+        capturedAt: capture.capturedAt,
+        detection: flow.detection,
+        manualType: flow.manualType,
+        description: flow.description,
+      });
+    } catch {
+      Alert.alert('No se pudo enviar', 'No hay conexión y tampoco se pudo guardar el reporte en el celular. Intenta de nuevo.');
+      return;
+    }
+    flow.reset();
+    router.dismissAll();
+    router.replace('/reports');
+    Alert.alert(
+      'Reporte guardado sin conexión',
+      'No pudimos conectarnos con el servidor. Tu reporte quedó guardado en el celular como "Pendiente de envío". Envíalo desde Mis reportes cuando tengas internet.',
+    );
   }
 
   return (
