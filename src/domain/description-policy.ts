@@ -1,18 +1,23 @@
 /**
  * Mismas reglas que DescriptionPolicy del servicio de incidencias, para avisar antes de enviar: la descripción debe
- * hablar del daño en la vía, sin groserías ni insultos y sin enlaces, correos ni teléfonos. Es una lista de palabras:
+ * hablar del daño en la vía, sin groserías ni insultos (en español o inglés) y sin enlaces, correos ni teléfonos. Es una lista de palabras:
  * atrapa lo evidente, pero no entiende el sentido del texto.
  */
-const BLOCKED_WORDS = new Set([
+export const BLOCKED_WORDS: ReadonlySet<string> = new Set([
   'mierda', 'mierdas', 'mrd', 'carajo', 'carajos', 'puta', 'putas', 'puto', 'putos', 'putamadre', 'ptm',
   'conchatumare', 'conchatumadre', 'conchasumare', 'conchasumadre', 'ctm', 'csm', 'chucha', 'chuchatumare',
   'huevon', 'huevona', 'huevones', 'huevonas', 'webon', 'webona', 'webones', 'weon', 'cojudo', 'cojuda',
   'cojudos', 'cojudas', 'cojudez', 'cabron', 'cabrona', 'cabrones', 'pendejo', 'pendeja', 'pendejos',
   'imbecil', 'imbeciles', 'idiota', 'idiotas', 'estupido', 'estupida', 'estupidos', 'estupidas', 'tarado',
   'tarada', 'mongol', 'mongolico', 'mongolica', 'retrasado', 'retrasada', 'maricon', 'maricones', 'marica',
-  'cabro', 'cabros', 'rosquete', 'zorra', 'zorras', 'verga', 'vergas', 'pinga', 'pingas',
+  'cabro', 'cabros', 'rosquete', 'zora', 'zoras', 'verga', 'vergas', 'pinga', 'pingas',
   'pichula', 'cagada', 'cagar', 'cagon', 'culo', 'culos', 'coño', 'joder', 'jodido', 'jodida', 'malparido',
-  'malparida', 'gonorrea', 'hijueputa', 'hdp', 'hdlgp', 'chupala', 'chupame', 'lameculos',
+  'malparida', 'gonorea', 'hijueputa', 'hdp', 'hdlgp', 'chupala', 'chupame', 'lameculos',
+  // Inglés. Van ya normalizadas: "asshole" se guarda como "ashole". "ass" no se incluye porque quedaría "as".
+  'fuck', 'fucks', 'fucked', 'fucking', 'fuckin', 'fucker', 'fuckers', 'motherfucker', 'fck', 'fuk', 'shit',
+  'shits', 'shity', 'bulshit', 'bitch', 'bitches', 'ashole', 'asholes', 'dick', 'dickhead', 'cock', 'pusy',
+  'cunt', 'bastard', 'slut', 'whore', 'fag', 'fagot', 'retard', 'retarded', 'dumbas', 'jackas', 'wtf',
+  'stfu', 'idiot', 'stupid', 'moron',
 ]);
 
 const LINK = /(https?:\/\/|www\.|\b[\w-]+\.(com|pe|net|org)\b)/i;

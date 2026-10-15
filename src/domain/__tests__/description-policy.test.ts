@@ -1,4 +1,4 @@
-import { descriptionProblem, normalizeForPolicy } from '../description-policy';
+import { BLOCKED_WORDS, descriptionProblem, normalizeForPolicy } from '../description-policy';
 
 describe('descriptionProblem', () => {
   it('acepta descripciones sobre la vía', () => {
@@ -14,6 +14,13 @@ describe('descriptionProblem', () => {
     expect(descriptionProblem('Huevón el que lo dejó así')).not.toBeNull();
   });
 
+  it('rechaza también groserías en inglés', () => {
+    expect(descriptionProblem('fix this shit')).not.toBeNull();
+    expect(descriptionProblem('FUUUCK this road')).not.toBeNull();
+    expect(descriptionProblem('what an asshole')).not.toBeNull();
+    expect(descriptionProblem('as bad as it gets')).toBeNull();
+  });
+
   it('rechaza enlaces, correos y teléfonos', () => {
     expect(descriptionProblem('mira https://ejemplo.com')).toMatch('enlaces');
     expect(descriptionProblem('visita www.ofertas.pe')).not.toBeNull();
@@ -25,5 +32,9 @@ describe('descriptionProblem', () => {
     expect(normalizeForPolicy('HUEVÓÓN')).toBe('huevon');
     expect(normalizeForPolicy('c0jud0')).toBe('cojudo');
     expect(normalizeForPolicy('Coño')).toBe('coño');
+  });
+
+  it('guarda cada palabra bloqueada ya normalizada', () => {
+    BLOCKED_WORDS.forEach((word) => expect(normalizeForPolicy(word)).toBe(word));
   });
 });
