@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 
-import { ApiError, toApiError } from '@/api/http';
+import { ApiError, isNetworkError, toApiError } from '@/api/http';
 
 function httpError(status: number, data: unknown): AxiosError {
   const config = { headers: new AxiosHeaders() };
@@ -22,5 +22,11 @@ describe('toApiError', () => {
 
   it('reconoce la falta de conexión', () => {
     expect(toApiError(new AxiosError('Network Error')).message).toMatch('No se pudo conectar');
+  });
+
+  it('distingue la falta de conexión de un rechazo del servidor', () => {
+    expect(isNetworkError(toApiError(new AxiosError('Network Error')))).toBe(true);
+    expect(isNetworkError(toApiError(httpError(400, { detail: 'Datos inválidos' })))).toBe(false);
+    expect(isNetworkError(new Error('otro'))).toBe(false);
   });
 });
