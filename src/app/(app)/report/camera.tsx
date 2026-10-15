@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts } from '@/constants/theme';
 import { formatCoordinates } from '@/domain/display';
 import { useReportFlow } from '@/report-flow/report-flow';
-import { addressFor, currentLocation, type DeviceLocation } from '@/services/location';
+import { addressFor, locate, openLocationSettings, type DeviceLocation } from '@/services/location';
 import { Button } from '@/ui/button';
 import { Icon, type IconName } from '@/ui/icon';
 
@@ -28,27 +28,36 @@ export default function CameraScreen() {
   const [address, setAddress] = useState<string | null>(null);
   const [locating, setLocating] = useState(true);
   const [busy, setBusy] = useState(false);
+  const mounted = useRef(true);
+
+  /** Vuelve a buscar la ubicación (por ejemplo, al tocar la etiqueta de GPS). */
+  async function refreshLocation() {
+    setLocating(true);
+    return lookUpLocation();
+  }
+
+  /** Busca la ubicación y la muestra en pantalla; devuelve el resultado para quien la pidió. */
+  async function lookUpLocation() {
+    try {
+      const result = await locate();
+      if (!mounted.current) return result;
+      if (result.status === 'ok') {
+        setLocation(result.location);
+        const street = await addressFor(result.location.coordinates);
+        if (mounted.current) setAddress(street);
+      }
+      return result;
+    } finally {
+      if (mounted.current) setLocating(false);
+    }
+  }
 
   // La ubicación se pide al abrir la cámara para mostrarla en pantalla antes de la foto.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const found = await currentLocation();
-        if (cancelled) return;
-        setLocation(found);
-        if (found) {
-          const street = await addressFor(found.coordinates);
-          if (!cancelled) setAddress(street);
-        }
-      } catch {
-        // Sin GPS se reintenta al tomar la foto.
-      } finally {
-        if (!cancelled) setLocating(false);
-      }
-    })();
+    mounted.current = true;
+    void lookUpLocation();
     return () => {
-      cancelled = true;
+      mounted.current = false;
     };
   }, []);
 
@@ -70,16 +79,27 @@ export default function CameraScreen() {
     );
   }
 
-  /** Usa la ubicación ya obtenida o la vuelve a pedir; avisa si el usuario no la concede. */
-  async function ensureLocation(): Promise<DeviceLocation | null> {
+  /**
+   * Usa la ubicación ya obtenida o la vuelve a pedir. Si no se consigue, explica por qué y ofrece
+   * activar el GPS (o dar el permiso) y reintentar la misma acción.
+   */
+  async function ensureLocation(retry: () => void): Promise<DeviceLocation | null> {
     if (location) return location;
-    const found = await currentLocation();
-    if (!found) {
-      Alert.alert('Ubicación requerida', 'Necesitamos tu ubicación para saber dónde está la incidencia.');
-      return null;
-    }
-    setLocation(found);
-    return found;
+    const result = await refreshLocation();
+    if (result.status === 'ok') return result.location;
+    const reason = result.status;
+    Alert.alert(
+      'No pudimos obtener tu ubicación',
+      reason === 'denied'
+        ? 'ViaDeep necesita permiso de ubicación para saber dónde está la incidencia. Actívalo en los ajustes y vuelve a intentarlo.'
+        : 'Activa el GPS (ubicación) de tu celular y vuelve a intentarlo. Si estás en un lugar cerrado, acércate a una zona abierta.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: reason === 'denied' ? 'Abrir ajustes' : 'Activar GPS', onPress: () => void openLocationSettings(reason) },
+        { text: 'Reintentar', onPress: retry },
+      ],
+    );
+    return null;
   }
 
   async function goToPreview(photoUri: string, found: DeviceLocation) {
@@ -101,7 +121,7 @@ export default function CameraScreen() {
     if (!cameraRef.current || busy) return;
     setBusy(true);
     try {
-      const found = await ensureLocation();
+      const found = await ensureLocation(() => void takePhoto());
       if (!found) return;
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
       await goToPreview(photo.uri, found);
@@ -118,13 +138,16 @@ export default function CameraScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
       if (result.canceled || !result.assets[0]) return;
-      // Se registra la ubicación actual del ciudadano, que debe estar junto a la incidencia.
-      const found = await ensureLocation();
-      if (!found) return;
-      await goToPreview(result.assets[0].uri, found);
+      await continueWithPhoto(result.assets[0].uri);
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Se registra la ubicación actual del ciudadano, que debe estar junto a la incidencia. */
+  async function continueWithPhoto(photoUri: string) {
+    const found = await ensureLocation(() => void continueWithPhoto(photoUri));
+    if (found) await goToPreview(photoUri, found);
   }
 
   function nextFlash() {
@@ -162,14 +185,19 @@ export default function CameraScreen() {
 
         <View style={styles.viewfinder}>
           <View style={styles.gps}>
-            <View style={styles.gpsPill}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Volver a buscar la ubicación"
+              disabled={locating || location !== null}
+              onPress={() => void refreshLocation()}
+              style={styles.gpsPill}>
               {locating ? (
                 <ActivityIndicator size="small" color={colors.successSoft} />
               ) : (
                 <Icon name={location ? 'my-location' : 'location-disabled'} size={15} color={colors.successSoft} />
               )}
               <Text style={styles.gpsText}>
-                {locating ? 'Buscando ubicación…' : location ? 'Ubicación detectada' : 'Ubicación no disponible'}
+                {locating ? 'Buscando ubicación…' : location ? 'Ubicación detectada' : 'Ubicación no disponible · Toca para reintentar'}
               </Text>
               {location?.accuracy ? (
                 <>
@@ -177,7 +205,7 @@ export default function CameraScreen() {
                   <Text style={styles.gpsAccuracy}>±{location.accuracy.toFixed(1)}m</Text>
                 </>
               ) : null}
-            </View>
+            </Pressable>
             {location ? (
               <View style={styles.ribbon}>
                 <Text style={styles.ribbonText} numberOfLines={1}>

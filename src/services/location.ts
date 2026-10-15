@@ -1,18 +1,45 @@
 import * as Location from 'expo-location';
+import { Linking, Platform } from 'react-native';
 
 import type { Coordinates } from './report-service';
 
 export type DeviceLocation = { coordinates: Coordinates; accuracy: number | null };
 
-/** Pide permiso de ubicación y devuelve la posición actual, o null si el usuario no lo concede. */
-export async function currentLocation(): Promise<DeviceLocation | null> {
+/** denied: el ciudadano no dio permiso. unavailable: hay permiso, pero el GPS está apagado o no dio posición. */
+export type LocationResult = { status: 'ok'; location: DeviceLocation } | { status: 'denied' } | { status: 'unavailable' };
+
+/** Pide permiso de ubicación y la posición actual, indicando por qué falló si no se obtiene. */
+export async function locate(): Promise<LocationResult> {
   const { granted } = await Location.requestForegroundPermissionsAsync();
-  if (!granted) return null;
-  const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-  return {
-    coordinates: { latitude: position.coords.latitude, longitude: position.coords.longitude },
-    accuracy: position.coords.accuracy ?? null,
-  };
+  if (!granted) return { status: 'denied' };
+  try {
+    const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    return {
+      status: 'ok',
+      location: {
+        coordinates: { latitude: position.coords.latitude, longitude: position.coords.longitude },
+        accuracy: position.coords.accuracy ?? null,
+      },
+    };
+  } catch {
+    return { status: 'unavailable' };
+  }
+}
+
+/**
+ * Lleva al ciudadano a donde puede solucionar el problema: los permisos de la app si los negó,
+ * o el aviso del sistema para encender la ubicación si el GPS está apagado (Android).
+ */
+export async function openLocationSettings(reason: 'denied' | 'unavailable'): Promise<void> {
+  if (reason === 'unavailable' && Platform.OS === 'android') {
+    try {
+      await Location.enableNetworkProviderAsync();
+      return;
+    } catch {
+      // Si el aviso del sistema no está disponible, se abren los ajustes de la app.
+    }
+  }
+  await Linking.openSettings();
 }
 
 /** Dirección aproximada (calle y distrito) usando el geocodificador del celular; null si no hay datos. */

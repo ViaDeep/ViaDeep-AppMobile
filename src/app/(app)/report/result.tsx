@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { evidenceApi } from '@/api/evidence-api';
@@ -13,7 +13,7 @@ import { INCIDENT_TYPES, TYPE_LABELS, type IncidentType } from '@/domain/inciden
 import { TYPE_ICONS } from '@/domain/type-icons';
 import { useReportFlow } from '@/report-flow/report-flow';
 import { useReports } from '@/reports/reports-context';
-import { acceptedDetection, submitReport } from '@/services/report-service';
+import { acceptedDetection, DESCRIPTION_MAX_LENGTH, submitReport } from '@/services/report-service';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
 import { Icon } from '@/ui/icon';
@@ -40,7 +40,7 @@ export default function ResultScreen() {
     setSending(true);
     try {
       const id = await submitReport(
-        { ...capture, detection: flow.detection, manualType: flow.manualType, description: '' },
+        { ...capture, detection: flow.detection, manualType: flow.manualType, description: flow.description },
         {
           uploadEvidence: evidenceApi.upload,
           registerIncident: incidentApi.register,
@@ -73,115 +73,138 @@ export default function ResultScreen() {
           )
         }
       />
-      <ScrollView contentContainerStyle={styles.content}>
-        <PhotoHud
-          uri={capture.photoUri}
-          height={208}
-          address={place}
-          time={dayAndClock(capture.capturedAt)}
-          box={
-            detection
-              ? {
-                  x: detection.bboxX,
-                  y: detection.bboxY,
-                  width: detection.bboxWidth,
-                  height: detection.bboxHeight,
-                  label: `${TYPE_LABELS[detection.type]} (${percent}%)`,
-                }
-              : null
-          }
-        />
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <PhotoHud
+            uri={capture.photoUri}
+            height={208}
+            address={place}
+            time={dayAndClock(capture.capturedAt)}
+            box={
+              detection
+                ? {
+                    x: detection.bboxX,
+                    y: detection.bboxY,
+                    width: detection.bboxWidth,
+                    height: detection.bboxHeight,
+                    label: `${TYPE_LABELS[detection.type]} (${percent}%)`,
+                  }
+                : null
+            }
+          />
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardHeaderLeft}>
-              <View style={styles.cardIcon}>
-                <Icon name={detection ? 'policy' : 'touch-app'} size={16} color={colors.primary} />
-              </View>
-              <View style={styles.flexShrink}>
-                <Text style={styles.cardTitle}>{detection ? 'Incidencia detectada' : 'Elige el tipo de daño'}</Text>
-                <Text style={styles.cardSubtitle}>
-                  {detection ? 'Revisión automática de calzada' : 'No hubo una detección automática confiable'}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.modelChip}>
-              <Text style={styles.modelChipText}>{detection ? 'LMD-YOLO' : 'MANUAL'}</Text>
-            </View>
-          </View>
-
-          {detection ? (
-            <View style={styles.tiles}>
-              <View style={[styles.tile, styles.tileHalf]}>
-                <Text style={styles.tileLabel}>Tipo de daño</Text>
-                <View style={styles.tileValueRow}>
-                  <Icon name={TYPE_ICONS[detection.type]} size={16} color={colors.text} />
-                  <Text style={styles.tileValue}>{TYPE_LABELS[detection.type]}</Text>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderLeft}>
+                <View style={styles.cardIcon}>
+                  <Icon name={detection ? 'policy' : 'touch-app'} size={16} color={colors.primary} />
                 </View>
-              </View>
-              <SeverityTile half />
-            </View>
-          ) : (
-            <>
-              <View style={styles.options}>
-                {INCIDENT_TYPES.map((option) => {
-                  const selected = flow.manualType === option;
-                  return (
-                    <Pressable
-                      key={option}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      onPress={() => flow.update({ manualType: option })}
-                      style={[styles.option, selected && styles.optionSelected]}>
-                      <Icon name={TYPE_ICONS[option]} size={18} color={selected ? colors.white : colors.primary} />
-                      <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{TYPE_LABELS[option]}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <SeverityTile />
-            </>
-          )}
-
-          {detection && percent ? (
-            <View style={styles.confidence}>
-              <View style={styles.confidenceRow}>
-                <View style={styles.confidenceLabel}>
-                  <Icon name="verified" size={14} color={colors.textSecondary} />
-                  <Text style={styles.confidenceText}>Nivel de coincidencia</Text>
-                </View>
-                <View style={styles.confidenceValue}>
-                  <Text style={styles.confidenceValueText}>
-                    {percent}% {detection.confidence >= 0.8 ? '(Alta precisión)' : '(Precisión media)'}
+                <View style={styles.flexShrink}>
+                  <Text style={styles.cardTitle}>{detection ? 'Incidencia detectada' : 'Elige el tipo de daño'}</Text>
+                  <Text style={styles.cardSubtitle}>
+                    {detection ? 'Revisión automática de calzada' : 'No hubo una detección automática confiable'}
                   </Text>
                 </View>
               </View>
-              <View style={styles.bar}>
-                <View style={[styles.barFill, { width: `${Math.min(100, detection.confidence * 100)}%` }]} />
+              <View style={styles.modelChip}>
+                <Text style={styles.modelChipText}>{detection ? 'LMD-YOLO' : 'MANUAL'}</Text>
               </View>
             </View>
-          ) : null}
 
-          <View style={styles.meta}>
-            <MetaRow icon="location-on" label="Ubicación validada por GPS" value={place} />
-            <MetaRow icon="event" label="Fecha y registro" value={longDate(capture.capturedAt)} />
-          </View>
-        </View>
+            {detection ? (
+              <View style={styles.tiles}>
+                <View style={[styles.tile, styles.tileHalf]}>
+                  <Text style={styles.tileLabel}>Tipo de daño</Text>
+                  <View style={styles.tileValueRow}>
+                    <Icon name={TYPE_ICONS[detection.type]} size={16} color={colors.text} />
+                    <Text style={styles.tileValue}>{TYPE_LABELS[detection.type]}</Text>
+                  </View>
+                </View>
+                <SeverityTile half />
+              </View>
+            ) : (
+              <>
+                <View style={styles.options}>
+                  {INCIDENT_TYPES.map((option) => {
+                    const selected = flow.manualType === option;
+                    return (
+                      <Pressable
+                        key={option}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        onPress={() => flow.update({ manualType: option })}
+                        style={[styles.option, selected && styles.optionSelected]}>
+                        <Icon name={TYPE_ICONS[option]} size={18} color={selected ? colors.white : colors.primary} />
+                        <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{TYPE_LABELS[option]}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <SeverityTile />
+              </>
+            )}
 
-        <View style={styles.disclaimer}>
-          <View style={styles.disclaimerIcon}>
-            <Icon name="account-balance" size={15} color={colors.white} />
+            {detection && percent ? (
+              <View style={styles.confidence}>
+                <View style={styles.confidenceRow}>
+                  <View style={styles.confidenceLabel}>
+                    <Icon name="verified" size={14} color={colors.textSecondary} />
+                    <Text style={styles.confidenceText}>Nivel de coincidencia</Text>
+                  </View>
+                  <View style={styles.confidenceValue}>
+                    <Text style={styles.confidenceValueText}>
+                      {percent}% {detection.confidence >= 0.8 ? '(Alta precisión)' : '(Precisión media)'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.bar}>
+                  <View style={[styles.barFill, { width: `${Math.min(100, detection.confidence * 100)}%` }]} />
+                </View>
+              </View>
+            ) : null}
+
+            <View style={styles.meta}>
+              <MetaRow icon="location-on" label="Ubicación validada por GPS" value={place} />
+              <MetaRow icon="event" label="Fecha y registro" value={longDate(capture.capturedAt)} />
+            </View>
           </View>
-          <View style={styles.flexShrink}>
-            <Text style={styles.disclaimerTitle}>Municipalidad Metropolitana de Lima</Text>
-            <Text style={styles.disclaimerText}>
-              {detection
-                ? 'Esta clasificación es generada automáticamente por el modelo de inteligencia artificial y será enviada junto con tu reporte para acelerar la inspección municipal.'
-                : 'El tipo de daño que elijas se enviará con tu reporte y será verificado por el equipo técnico durante la inspección municipal.'}
-            </Text>
+
+          <View style={styles.card}>
+            <View style={styles.descriptionHead}>
+              <Text style={styles.descriptionLabel}>Descripción (opcional)</Text>
+              <Text style={styles.descriptionCount}>
+                {flow.description.length}/{DESCRIPTION_MAX_LENGTH}
+              </Text>
+            </View>
+            <TextInput
+              accessibilityLabel="Descripción de la incidencia"
+              value={flow.description}
+              onChangeText={(text) => flow.update({ description: text })}
+              maxLength={DESCRIPTION_MAX_LENGTH}
+              multiline
+              placeholder="Ej. El bache ocupa todo el carril derecho, frente al paradero."
+              placeholderTextColor={colors.placeholder}
+              style={styles.descriptionInput}
+              editable={!sending}
+            />
+            <Text style={styles.descriptionHint}>Puedes agregar detalles que ayuden a ubicar o evaluar el daño.</Text>
           </View>
-        </View>
-      </ScrollView>
+
+          <View style={styles.disclaimer}>
+            <View style={styles.disclaimerIcon}>
+              <Icon name="account-balance" size={15} color={colors.white} />
+            </View>
+            <View style={styles.flexShrink}>
+              <Text style={styles.disclaimerTitle}>Municipalidad Metropolitana de Lima</Text>
+              <Text style={styles.disclaimerText}>
+                {detection
+                  ? 'Esta clasificación es generada automáticamente por el modelo de inteligencia artificial y será enviada junto con tu reporte para acelerar la inspección municipal.'
+                  : 'El tipo de daño que elijas se enviará con tu reporte y será verificado por el equipo técnico durante la inspección municipal.'}
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <SafeAreaView edges={['bottom']} style={styles.footer}>
         <Button
@@ -226,7 +249,26 @@ function MetaRow({ icon, label, value }: { icon: 'location-on' | 'event'; label:
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   flexShrink: { flexShrink: 1 },
+  descriptionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  descriptionLabel: { fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16, color: colors.text },
+  descriptionCount: { fontFamily: fonts.mono, fontSize: 11, lineHeight: 16, color: colors.textSecondary },
+  descriptionInput: {
+    minHeight: 84,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+    textAlignVertical: 'top',
+  },
+  descriptionHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
   content: { padding: 16, gap: 14, paddingBottom: 24 },
   card: {
     backgroundColor: colors.surface,
