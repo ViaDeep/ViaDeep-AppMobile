@@ -2,6 +2,9 @@ import type { RegisterIncidentRequest } from '@/api/incident-api';
 import type { IncidentType } from '@/domain/incident';
 import type { Detection } from '@/inference/inference-engine';
 
+/** Mismo límite que la columna description del servicio de incidencias. */
+export const DESCRIPTION_MAX_LENGTH = 500;
+
 export type Coordinates = { latitude: number; longitude: number };
 
 export type ReportDraft = {
