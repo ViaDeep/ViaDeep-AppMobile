@@ -9,6 +9,7 @@ import { incidentApi } from '@/api/incident-api';
 import { PhotoHud } from '@/components/photo-hud';
 import { env } from '@/config/env';
 import { colors, fonts } from '@/constants/theme';
+import { descriptionProblem } from '@/domain/description-policy';
 import { dayAndClock, formatCoordinates, longDate } from '@/domain/display';
 import { INCIDENT_TYPES, TYPE_LABELS, type IncidentType } from '@/domain/incident';
 import { TYPE_ICONS } from '@/domain/type-icons';
@@ -38,8 +39,14 @@ export default function ResultScreen() {
   const percent = detection ? (detection.confidence * 100).toFixed(1) : null;
   const place = capture.address ?? formatCoordinates(capture.coordinates.latitude, capture.coordinates.longitude);
 
+  const descriptionError = descriptionProblem(flow.description);
+
   async function confirm() {
     if (!capture) return;
+    if (descriptionError) {
+      Alert.alert('Revisa la descripción', descriptionError);
+      return;
+    }
     setSending(true);
     try {
       const id = await submitReport(
@@ -217,10 +224,14 @@ export default function ResultScreen() {
               multiline
               placeholder="Ej. El bache ocupa todo el carril derecho, frente al paradero."
               placeholderTextColor={colors.placeholder}
-              style={styles.descriptionInput}
+              style={[styles.descriptionInput, descriptionError ? styles.descriptionInputError : null]}
               editable={!sending}
             />
-            <Text style={styles.descriptionHint}>Puedes agregar detalles que ayuden a ubicar o evaluar el daño.</Text>
+            {descriptionError ? (
+              <Text style={styles.descriptionError}>{descriptionError}</Text>
+            ) : (
+              <Text style={styles.descriptionHint}>Puedes agregar detalles que ayuden a ubicar o evaluar el daño.</Text>
+            )}
           </View>
 
           <View style={styles.disclaimer}>
@@ -301,6 +312,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlignVertical: 'top',
   },
+  descriptionInputError: { borderColor: colors.danger },
+  descriptionError: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, color: colors.danger },
   descriptionHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
   content: { padding: 16, gap: 14, paddingBottom: 24 },
   card: {
