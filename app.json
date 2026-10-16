@@ -55,7 +55,7 @@
         "expo-image-picker",
         {
           "photosPermission": "ViaDeep usa tu galería para adjuntar la foto de un daño en la pista.",
-          "cameraPermission": false,
+          "cameraPermission": "ViaDeep usa la cámara para fotografiar daños en la pista.",
           "microphonePermission": false
         }
       ]

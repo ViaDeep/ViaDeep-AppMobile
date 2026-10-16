@@ -3,7 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, fonts } from '@/constants/theme';
@@ -73,7 +73,12 @@ export default function CameraScreen() {
       <SafeAreaView style={[styles.flex, styles.centered, styles.permission]}>
         <Icon name="photo-camera" size={40} color={colors.white} />
         <Text style={styles.permissionText}>ViaDeep necesita la cámara para fotografiar la incidencia en la vía.</Text>
-        <Button title="Permitir cámara" variant="primary" onPress={() => void requestPermission()} style={styles.permissionButton} />
+        <Button
+          title={permission.canAskAgain ? 'Permitir cámara' : 'Abrir ajustes'}
+          variant="primary"
+          onPress={() => void (permission.canAskAgain ? requestPermission() : Linking.openSettings())}
+          style={styles.permissionButton}
+        />
         <Button title="Volver" variant="outline" onPress={() => router.back()} style={styles.permissionButton} />
       </SafeAreaView>
     );
