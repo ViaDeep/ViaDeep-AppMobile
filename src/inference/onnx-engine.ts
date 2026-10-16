@@ -1,7 +1,7 @@
 import { Asset } from 'expo-asset';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import type { InferenceSession, Tensor } from 'onnxruntime-react-native';
-import { NativeModules } from 'react-native';
+import { NativeModules, TurboModuleRegistry } from 'react-native';
 import UPNG from 'upng-js';
 
 import type { Detection, InferenceEngine } from './inference-engine';
@@ -18,6 +18,35 @@ type Ort = typeof import('onnxruntime-react-native');
  * manual en lugar de cerrarse al importar la librería.
  */
 export const onnxRuntimeInstalled = NativeModules.Onnxruntime != null;
+
+// DIAGNÓSTICO TEMPORAL (no unir a main): muestra en el celular qué ve JavaScript del módulo nativo.
+if (__DEV__) {
+  const g = globalThis as Record<string, unknown>;
+  let turbo: unknown;
+  try {
+    turbo = TurboModuleRegistry.get('Onnxruntime') != null;
+  } catch (e) {
+    turbo = String(e);
+  }
+  let lib: unknown;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    lib = typeof require('onnxruntime-react-native').InferenceSession;
+  } catch (e) {
+    lib = String(e);
+  }
+  console.warn(
+    '[diag onnx] ' +
+      JSON.stringify({
+        bridgeless: g['RN$Bridgeless'] ?? null,
+        proxy: typeof g.nativeModuleProxy,
+        legacy: NativeModules.Onnxruntime != null,
+        turbo,
+        lib,
+        platformConstants: NativeModules.PlatformConstants != null,
+      }),
+  );
+}
 
 let ort: Ort | null = null;
 let session: Promise<InferenceSession> | null = null;
