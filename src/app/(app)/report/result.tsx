@@ -16,7 +16,8 @@ import { TYPE_ICONS } from '@/domain/type-icons';
 import { usePendingReports } from '@/offline/pending-reports-context';
 import { useReportFlow } from '@/report-flow/report-flow';
 import { useReports } from '@/reports/reports-context';
-import { acceptedDetection, DESCRIPTION_MAX_LENGTH, submitReport } from '@/services/report-service';
+import { inferenceEngine } from '@/inference/engine';
+import { acceptedDetection, DESCRIPTION_MAX_LENGTH, manualReason, submitReport } from '@/services/report-service';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
 import { Icon } from '@/ui/icon';
@@ -150,6 +151,15 @@ export default function ResultScreen() {
                 <Text style={styles.modelChipText}>{detection ? 'LMD-YOLO' : 'MANUAL'}</Text>
               </View>
             </View>
+
+            {detection ? null : (
+              <View style={styles.manualNotice}>
+                <Icon name="info" size={14} color={colors.warningText} />
+                <Text style={styles.manualNoticeText}>
+                  {manualReason(inferenceEngine.available, flow.detection, env.aiConfidenceThreshold)}
+                </Text>
+              </View>
+            )}
 
             {detection ? (
               <View style={styles.tiles}>
@@ -337,6 +347,16 @@ const styles = StyleSheet.create({
   cardIcon: { width: 32, height: 32, borderRadius: 12, backgroundColor: 'rgba(0,87,192,0.1)', alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 22.5, color: colors.text },
   cardSubtitle: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
+  manualNotice: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+    backgroundColor: colors.warningSurface,
+  },
+  manualNoticeText: { flex: 1, fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.warningText },
   modelChip: { backgroundColor: colors.surfaceBlueSoft, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
   modelChipText: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.6, color: '#001A43' },
   tiles: { flexDirection: 'row', gap: 10 },

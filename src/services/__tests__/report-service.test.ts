@@ -1,5 +1,5 @@
 import type { Detection } from '@/inference/inference-engine';
-import { buildIncidentRequest, submitReport, type ReportDraft } from '@/services/report-service';
+import { buildIncidentRequest, manualReason, submitReport, type ReportDraft } from '@/services/report-service';
 
 const detection: Detection = { type: 'D40', confidence: 0.82, bboxX: 0.1, bboxY: 0.2, bboxWidth: 0.3, bboxHeight: 0.4 };
 
@@ -77,5 +77,23 @@ describe('submitReport', () => {
       submitReport(draft(), { uploadEvidence, registerIncident: jest.fn(), confidenceThreshold: 0.5 }),
     ).rejects.toThrow();
     expect(uploadEvidence).not.toHaveBeenCalled();
+  });
+});
+
+describe('manualReason', () => {
+  const low: Detection = { type: 'D40', confidence: 0.347, bboxX: 0, bboxY: 0, bboxWidth: 1, bboxHeight: 1 };
+
+  it('avisa si el celular no tiene el modelo', () => {
+    expect(manualReason(false, null, 0.5)).toBe('Este celular no tiene el modelo de IA instalado, así que elige tú el tipo de daño.');
+  });
+
+  it('avisa si la IA no encontró ningún daño', () => {
+    expect(manualReason(true, null, 0.5)).toBe(
+      'La IA no reconoció ningún daño en la foto con al menos 50 % de seguridad. Elige tú el tipo de daño.',
+    );
+  });
+
+  it('muestra la seguridad obtenida y la necesaria cuando no llega al umbral', () => {
+    expect(manualReason(true, low, 0.5)).toBe('La IA solo tuvo 35 % de seguridad y se necesita al menos 50 %. Elige tú el tipo de daño.');
   });
 });
