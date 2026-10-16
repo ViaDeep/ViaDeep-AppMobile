@@ -22,7 +22,7 @@ confianza es menor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD` (0.5 por defecto), 
 de daño. ONNX Runtime es código nativo, así que en Expo Go la app sigue en "MODO MANUAL"; para usar el
 modelo se instala el APK de desarrollo (ver más abajo).
 
-El modelo actual es el `best.pt` de la etapa 6 (20 épocas) del repositorio
+El modelo actual es el `best.pt` de la etapa 7 (100 épocas, mejor época 99, mAP@50 de validación 0,745) del repositorio
 [ViaDeep/LMD-YOLO](https://github.com/ViaDeep/LMD-YOLO), reparametrizado (DBB en modo deploy) y exportado
 a ONNX FP32 640 sin NMS. Para cambiarlo por otro entrenamiento basta con reemplazar el archivo, siempre
 que mantenga la entrada `[1, 3, 640, 640]`, la salida `[1, 8, 8400]` y las clases D00, D10, D20 y D40.
