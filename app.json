@@ -62,6 +62,12 @@
     ],
     "experiments": {
       "reactCompiler": true
+    },
+    "owner": "rodrigo123",
+    "extra": {
+      "eas": {
+        "projectId": "5390d72e-b784-4b99-ac77-5c1f3dd22fd4"
+      }
     }
   }
 }
