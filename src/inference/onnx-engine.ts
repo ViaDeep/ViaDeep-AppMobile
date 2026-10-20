@@ -62,6 +62,32 @@ async function readPixels(imageUri: string) {
   return { box, rgba };
 }
 
+/** Milisegundos de cada etapa de una detección, para medir la latencia en el celular. */
+export type StageTimes = { pixels: number; tensor: number; inference: number; postprocess: number; total: number };
+
+/** Ejecuta el mismo camino que `detect` sobre una foto y cronometra cada etapa. */
+export async function timedDetect(imageUri: string): Promise<{ detection: Detection | null; times: StageTimes }> {
+  const model = await loadSession();
+  if (!ort) throw new Error('ONNX Runtime no está disponible');
+  const t0 = performance.now();
+  const { box, rgba } = await readPixels(imageUri);
+  const t1 = performance.now();
+  const input: Tensor = new ort.Tensor('float32', toInputTensor(rgba, box), [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
+  const t2 = performance.now();
+  const result = await model.run({ [model.inputNames[0]]: input });
+  const t3 = performance.now();
+  const detection = bestDetection(result[model.outputNames[0]].data as Float32Array, box);
+  const t4 = performance.now();
+  return { detection, times: { pixels: t1 - t0, tensor: t2 - t1, inference: t3 - t2, postprocess: t4 - t3, total: t4 - t0 } };
+}
+
+/** Milisegundos que tarda en cargar el modelo la primera vez (0 si ya estaba cargado). */
+export async function sessionLoadTime(): Promise<number> {
+  const started = performance.now();
+  await loadSession();
+  return performance.now() - started;
+}
+
 /** LMD-YOLO en el celular con ONNX Runtime (CPU). */
 export const onnxInferenceEngine: InferenceEngine = {
   available: true,
