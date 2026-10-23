@@ -1,10 +1,17 @@
+import Constants from 'expo-constants';
+
+import { devServerHost, withDevHost } from './dev-host';
+
 /**
  * URLs de los microservicios. En desarrollo cada servicio corre en su propio puerto de la PC
  * (usa la IP de la PC en la red Wi-Fi, no localhost: el celular no ve el localhost de la PC).
  * En producción todas apuntan al mismo API Gateway.
+ * Si la IP de la PC cambia, se usa la IP con la que el celular llega a Expo en vez de la del `.env`.
  */
+const devHost = devServerHost(Constants.expoConfig?.hostUri);
+
 function readUrl(value: string | undefined, fallback: string): string {
-  return (value && value.trim().length > 0 ? value.trim() : fallback).replace(/\/+$/, '');
+  return withDevHost((value && value.trim().length > 0 ? value.trim() : fallback).replace(/\/+$/, ''), devHost);
 }
 
 const incidentsUrl = readUrl(process.env.EXPO_PUBLIC_INCIDENTS_URL, 'http://localhost:8082');
