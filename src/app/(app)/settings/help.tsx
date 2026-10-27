@@ -147,6 +147,12 @@ export default function HelpScreen() {
               subtitle="Latencia de LMD-YOLO en este celular"
               onPress={() => router.push('/settings/benchmark')}
             />
+            <SettingsRow
+              icon="timer"
+              title="Prueba de uso continuo"
+              subtitle="15 o 30 minutos seguidos: latencia, memoria y temperatura"
+              onPress={() => router.push('/settings/continuous')}
+            />
           </SettingsSection>
         ) : null}
 
