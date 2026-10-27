@@ -6,7 +6,13 @@ import { Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, fonts } from '@/constants/theme';
-import { onnxRuntimeInstalled, sessionLoadTime, timedDetect, type StageTimes } from '@/inference/onnx-engine';
+import {
+  onnxRuntimeInstalled,
+  sessionLoadTime,
+  timedDetect,
+  type NativeTimes,
+  type StageTimes,
+} from '@/inference/onnx-engine';
 import { summarize, type LatencySummary } from '@/inference/latency-stats';
 import { Button } from '@/ui/button';
 import { SettingsSection } from '@/ui/settings';
@@ -26,15 +32,23 @@ const STAGES: { key: keyof StageTimes; label: string }[] = [
   { key: 'total', label: 'Total (end-to-end)' },
 ];
 
+// Desglose de "Leer y redimensionar foto" medido dentro del código nativo.
+const NATIVE_STAGES: { key: keyof NativeTimes; label: string }[] = [
+  { key: 'decode', label: '· Decodificar foto (nativo)' },
+  { key: 'letterbox', label: '· Letterbox y tensor (nativo)' },
+];
+
 type Report = {
   device: string;
   android: string;
   image: string;
+  preprocessing: 'nativo' | 'js';
   warmup: number;
   runs: number;
   sessionLoadMs: number;
   detection: string;
   stages: Record<keyof StageTimes, LatencySummary>;
+  nativeStages: Record<keyof NativeTimes, LatencySummary> | null;
   rawTotalMs: number[];
 };
 
@@ -68,22 +82,30 @@ export default function BenchmarkScreen() {
         await timedDetect(source.uri);
       }
       const samples: StageTimes[] = [];
+      const nativeSamples: NativeTimes[] = [];
       for (let i = 0; i < RUNS; i++) {
         setProgress(`Midiendo ${i + 1}/${RUNS}`);
-        const { detection: found, times } = await timedDetect(source.uri);
+        const { detection: found, times, native } = await timedDetect(source.uri);
         samples.push(times);
+        if (native) nativeSamples.push(native);
         if (found) detection = `${found.type} ${(found.confidence * 100).toFixed(1)} %`;
       }
       const stages = Object.fromEntries(STAGES.map(({ key }) => [key, summarize(samples.map((s) => s[key]))])) as Report['stages'];
+      const nativeStages =
+        nativeSamples.length === RUNS
+          ? (Object.fromEntries(NATIVE_STAGES.map(({ key }) => [key, summarize(nativeSamples.map((s) => s[key]))])) as Report['nativeStages'])
+          : null;
       setReport({
         device: `${Device.manufacturer ?? ''} ${Device.modelName ?? ''}`.trim(),
         android: `${Device.osVersion ?? Platform.Version}`,
         image: source.name,
+        preprocessing: nativeStages ? 'nativo' : 'js',
         warmup: WARMUP,
         runs: RUNS,
         sessionLoadMs,
         detection,
         stages,
+        nativeStages,
         rawTotalMs: samples.map((s) => Number(s.total.toFixed(2))),
       });
     } catch (e) {
@@ -116,7 +138,7 @@ export default function BenchmarkScreen() {
 
         {report ? (
           <>
-            <SettingsSection title="RESULTADOS (MS)" footer={`${report.device} · Android ${report.android} · carga del modelo ${ms(report.sessionLoadMs)} ms · ${report.detection}`}>
+            <SettingsSection title="RESULTADOS (MS)" footer={`${report.device} · Android ${report.android} · foto preparada en ${report.preprocessing === 'nativo' ? 'Kotlin' : 'JavaScript'} · carga del modelo ${ms(report.sessionLoadMs)} ms · ${report.detection}`}>
               <View style={[styles.tableRow, styles.tableHead]}>
                 <Text style={[styles.cell, styles.stageCell, styles.head]}>Etapa</Text>
                 {['Media', 'P50', 'P95', 'Mín', 'Máx'].map((h) => (
@@ -125,19 +147,21 @@ export default function BenchmarkScreen() {
                   </Text>
                 ))}
               </View>
-              {STAGES.map(({ key, label }) => {
-                const s = report.stages[key];
-                return (
-                  <View key={key} style={styles.tableRow}>
-                    <Text style={[styles.cell, styles.stageCell, key === 'total' && styles.bold]}>{label}</Text>
-                    {[s.mean, s.p50, s.p95, s.min, s.max].map((v, i) => (
-                      <Text key={i} style={[styles.cell, key === 'total' && styles.bold]}>
-                        {ms(v)}
-                      </Text>
-                    ))}
-                  </View>
-                );
-              })}
+              {STAGES.flatMap(({ key, label }) => [
+                { key, label, s: report.stages[key], sub: false },
+                ...(key === 'pixels' && report.nativeStages
+                  ? NATIVE_STAGES.map((n) => ({ key: n.key, label: n.label, s: report.nativeStages![n.key], sub: true }))
+                  : []),
+              ]).map(({ key, label, s, sub }) => (
+                <View key={key} style={styles.tableRow}>
+                  <Text style={[styles.cell, styles.stageCell, key === 'total' && styles.bold, sub && styles.sub]}>{label}</Text>
+                  {[s.mean, s.p50, s.p95, s.min, s.max].map((v, i) => (
+                    <Text key={i} style={[styles.cell, key === 'total' && styles.bold, sub && styles.sub]}>
+                      {ms(v)}
+                    </Text>
+                  ))}
+                </View>
+              ))}
             </SettingsSection>
             <Button
               title="Compartir resultados"
@@ -164,4 +188,5 @@ const styles = StyleSheet.create({
   stageCell: { flex: 1, width: undefined, fontFamily: fonts.regular, fontSize: 12, textAlign: 'left' },
   head: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.textMuted },
   bold: { fontFamily: fonts.monoBold },
+  sub: { color: colors.textMuted },
 });
