@@ -1,6 +1,6 @@
 {
   "platforms": ["android"],
   "android": {
-    "modules": ["expo.modules.imagetensor.ImageTensorModule"]
+    "modules": ["expo.modules.imagetensor.ImageTensorModule", "expo.modules.imagetensor.DeviceStatsModule"]
   }
 }
