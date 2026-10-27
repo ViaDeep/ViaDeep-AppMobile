@@ -1,0 +1,6 @@
+{
+  "name": "image-tensor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prepara en Kotlin la foto que recibe LMD-YOLO (letterbox 640 y tensor NCHW)."
+}
