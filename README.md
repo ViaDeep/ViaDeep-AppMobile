@@ -26,6 +26,11 @@ confianza es menor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD` (0.5 por defecto), 
 de daño. ONNX Runtime es código nativo, así que en Expo Go la app sigue en "MODO MANUAL"; para usar el
 modelo se instala el APK de desarrollo (ver más abajo).
 
+En Perfil > Ayuda y soporte hay dos pantallas para el paper: "Medir rendimiento del modelo" (latencia por foto)
+y "Prueba de uso continuo", que detecta una foto tras otra durante 15 o 30 minutos y cada 30 s anota la memoria
+de la app, la temperatura de la batería y el estado térmico. Guarda el avance cada minuto en el celular, así que
+si la app se cierra a mitad de la prueba se ve cuándo pasó.
+
 El modelo actual es el `best.pt` de la etapa 9, el entrenamiento final: la etapa 8 entrenada 100 épocas más con
 RDD2022 de China, Japón, India, República Checa y Estados Unidos (mAP@50 de validación 0,797 en China y 0,472 en
 los otros países). Viene del repositorio
@@ -48,7 +53,7 @@ digital, preferencias de avisos) muestran el aviso "disponible próximamente".
 | `src/notifications/` | Avisos derivados del historial de los reportes (con pruebas). |
 | `src/services/` | Envío de reportes y ubicación (con pruebas). |
 | `src/inference/` | Inferencia on-device con LMD-YOLO: preproceso, lectura de la salida y motor ONNX Runtime (con pruebas). |
-| `modules/image-tensor/` | Módulo nativo de Expo (Kotlin, Android) que convierte la foto en el tensor de LMD-YOLO. |
+| `modules/image-tensor/` | Módulo nativo de Expo (Kotlin, Android) que convierte la foto en el tensor de LMD-YOLO y lee memoria, temperatura y estado térmico del celular. |
 | `src/domain/` | Tipos, etiquetas en español, estados y códigos de reporte (con pruebas). |
 | `src/components/` | Tarjetas de reporte y foto con datos superpuestos. |
 | `src/ui/` | Componentes visuales base (botones, campos, etiquetas, cabeceras). |
