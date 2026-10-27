@@ -16,8 +16,12 @@ El diseño sigue los mockups de Figma del proyecto (colores, tipografías Inter 
 - Notificaciones armadas a partir del historial de cada reporte (el backend aún no tiene servicio de avisos).
 
 La detección corre en el celular con LMD-YOLO (`assets/models/lmd-yolo.onnx`) y ONNX Runtime en CPU:
-la foto se encaja en 640 × 640 con el letterbox de Ultralytics (`src/inference/preprocessing.ts`) y de la
-salida `[1, 8, 8400]` se toma la caja de mayor confianza (`src/inference/postprocessing.ts`). Si la
+la foto se encaja en 640 × 640 con el letterbox canónico de LMD-YOLO y de la salida `[1, 8, 8400]` se toma la
+caja de mayor confianza (`src/inference/postprocessing.ts`). La foto se prepara en Kotlin
+(`modules/image-tensor/`): decodifica el JPEG, aplica la orientación EXIF y arma el tensor con las mismas
+ecuaciones que `docs/canonical_mobile_preprocessing.md` del repositorio LMD-YOLO. Da el mismo tensor bit a bit
+que `scripts/generate_canonical_mobile_golden.py`. En un APK anterior a ese módulo, la app vuelve al camino
+en JavaScript (`src/inference/preprocessing.ts`), que es más lento. Si la
 confianza es menor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD` (0.5 por defecto), el ciudadano elige el tipo
 de daño. ONNX Runtime es código nativo, así que en Expo Go la app sigue en "MODO MANUAL"; para usar el
 modelo se instala el APK de desarrollo (ver más abajo).
@@ -44,6 +48,7 @@ digital, preferencias de avisos) muestran el aviso "disponible próximamente".
 | `src/notifications/` | Avisos derivados del historial de los reportes (con pruebas). |
 | `src/services/` | Envío de reportes y ubicación (con pruebas). |
 | `src/inference/` | Inferencia on-device con LMD-YOLO: preproceso, lectura de la salida y motor ONNX Runtime (con pruebas). |
+| `modules/image-tensor/` | Módulo nativo de Expo (Kotlin, Android) que convierte la foto en el tensor de LMD-YOLO. |
 | `src/domain/` | Tipos, etiquetas en español, estados y códigos de reporte (con pruebas). |
 | `src/components/` | Tarjetas de reporte y foto con datos superpuestos. |
 | `src/ui/` | Componentes visuales base (botones, campos, etiquetas, cabeceras). |
