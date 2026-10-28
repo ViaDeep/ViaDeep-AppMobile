@@ -9,6 +9,7 @@ import { colors, fonts } from '@/constants/theme';
 import { INCIDENT_TYPES, TYPE_LABELS, type IncidentType } from '@/domain/incident';
 import { TYPE_ICONS } from '@/domain/type-icons';
 import { onnxRuntimeInstalled } from '@/inference/onnx-engine';
+import { DamageHelpSheet } from '@/ui/damage-help';
 import { Icon, type IconName } from '@/ui/icon';
 import { SettingsRow, SettingsSection } from '@/ui/settings';
 import { BackHeader } from '@/ui/top-bar';
@@ -58,6 +59,7 @@ const FAQ: { question: string; answer: string }[] = [
 
 export default function HelpScreen() {
   const [open, setOpen] = useState<number | null>(0);
+  const [damage, setDamage] = useState<IncidentType | null>(null);
   const version = Constants.expoConfig?.version ?? '1.0.0';
 
   return (
@@ -95,7 +97,7 @@ export default function HelpScreen() {
 
         <SettingsSection title="TIPOS DE DAÑO">
           {INCIDENT_TYPES.map((type, index) => (
-            <SettingsRow key={type} first={index === 0} icon={TYPE_ICONS[type]} title={`${TYPE_LABELS[type]} · ${type}`} subtitle={TYPE_HINTS[type]} />
+            <SettingsRow key={type} first={index === 0} icon={TYPE_ICONS[type]} title={`${TYPE_LABELS[type]} · ${type}`} subtitle={TYPE_HINTS[type]} onPress={() => setDamage(type)} />
           ))}
         </SettingsSection>
 
@@ -158,6 +160,7 @@ export default function HelpScreen() {
 
         <Text style={styles.version}>ViaDeep · versión {version}</Text>
       </ScrollView>
+      <DamageHelpSheet type={damage} onClose={() => setDamage(null)} />
     </SafeAreaView>
   );
 }
