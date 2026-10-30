@@ -50,17 +50,24 @@
         }
       ],
       "expo-secure-store",
+      "onnxruntime-react-native",
       [
         "expo-image-picker",
         {
           "photosPermission": "ViaDeep usa tu galería para adjuntar la foto de un daño en la pista.",
-          "cameraPermission": false,
+          "cameraPermission": "ViaDeep usa la cámara para fotografiar daños en la pista.",
           "microphonePermission": false
         }
       ]
     ],
     "experiments": {
       "reactCompiler": true
+    },
+    "owner": "rodrigo123",
+    "extra": {
+      "eas": {
+        "projectId": "5390d72e-b784-4b99-ac77-5c1f3dd22fd4"
+      }
     }
   }
 }

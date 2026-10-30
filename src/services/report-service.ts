@@ -27,6 +27,22 @@ export function acceptedDetection(detection: Detection | null, threshold: number
   return detection && detection.confidence >= threshold ? detection : null;
 }
 
+/**
+ * Explica al ciudadano por qué le toca elegir el tipo de daño: sin modelo en el celular, sin ninguna detección o
+ * con una detección por debajo del umbral.
+ */
+export function manualReason(modelAvailable: boolean, detection: Detection | null, threshold: number): string {
+  const required = `${Math.round(threshold * 100)} %`;
+  if (!modelAvailable) {
+    return 'Este celular no tiene el modelo de IA instalado, así que elige tú el tipo de daño.';
+  }
+  if (!detection) {
+    return `La IA no reconoció ningún daño en la foto con al menos ${required} de seguridad. Elige tú el tipo de daño.`;
+  }
+  const percent = `${(detection.confidence * 100).toFixed(0)} %`;
+  return `La IA solo tuvo ${percent} de seguridad y se necesita al menos ${required}. Elige tú el tipo de daño.`;
+}
+
 export function buildIncidentRequest(
   draft: ReportDraft,
   evidenceId: string,
