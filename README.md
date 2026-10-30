@@ -16,14 +16,24 @@ El diseño sigue los mockups de Figma del proyecto (colores, tipografías Inter 
 - Notificaciones armadas a partir del historial de cada reporte (el backend aún no tiene servicio de avisos).
 
 La detección corre en el celular con LMD-YOLO (`assets/models/lmd-yolo.onnx`) y ONNX Runtime en CPU:
-la foto se encaja en 640 × 640 con el letterbox de Ultralytics (`src/inference/preprocessing.ts`) y de la
-salida `[1, 8, 8400]` se toma la caja de mayor confianza (`src/inference/postprocessing.ts`). Si la
+la foto se encaja en 640 × 640 con el letterbox canónico de LMD-YOLO y de la salida `[1, 8, 8400]` se toma la
+caja de mayor confianza (`src/inference/postprocessing.ts`). La foto se prepara en Kotlin
+(`modules/image-tensor/`): decodifica el JPEG, aplica la orientación EXIF y arma el tensor con las mismas
+ecuaciones que `docs/canonical_mobile_preprocessing.md` del repositorio LMD-YOLO. Da el mismo tensor bit a bit
+que `scripts/generate_canonical_mobile_golden.py`. En un APK anterior a ese módulo, la app vuelve al camino
+en JavaScript (`src/inference/preprocessing.ts`), que es más lento. Si la
 confianza es menor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD` (0.5 por defecto), el ciudadano elige el tipo
 de daño. ONNX Runtime es código nativo, así que en Expo Go la app sigue en "MODO MANUAL"; para usar el
 modelo se instala el APK de desarrollo (ver más abajo).
 
-El modelo actual es el `best.pt` de la etapa 8 (la etapa 7 ajustada 50 épocas con RDD2022 de China, Japón, India,
-República Checa y Estados Unidos; mAP@50 de validación 0,742 en China y 0,436 en los otros países) del repositorio
+En Perfil > Ayuda y soporte hay dos pantallas para el paper: "Medir rendimiento del modelo" (latencia por foto)
+y "Prueba de uso continuo", que detecta una foto tras otra durante 15 o 30 minutos y cada 30 s anota la memoria
+de la app, la temperatura de la batería y el estado térmico. Guarda el avance cada minuto en el celular, así que
+si la app se cierra a mitad de la prueba se ve cuándo pasó.
+
+El modelo actual es el `best.pt` de la etapa 9, el entrenamiento final: la etapa 8 entrenada 100 épocas más con
+RDD2022 de China, Japón, India, República Checa y Estados Unidos (mAP@50 de validación 0,797 en China y 0,472 en
+los otros países). Viene del repositorio
 [ViaDeep/LMD-YOLO](https://github.com/ViaDeep/LMD-YOLO), reparametrizado (DBB en modo deploy) y exportado
 a ONNX FP32 640 sin NMS. Para cambiarlo por otro entrenamiento basta con reemplazar el archivo, siempre
 que mantenga la entrada `[1, 3, 640, 640]`, la salida `[1, 8, 8400]` y las clases D00, D10, D20 y D40.
@@ -43,6 +53,7 @@ digital, preferencias de avisos) muestran el aviso "disponible próximamente".
 | `src/notifications/` | Avisos derivados del historial de los reportes (con pruebas). |
 | `src/services/` | Envío de reportes y ubicación (con pruebas). |
 | `src/inference/` | Inferencia on-device con LMD-YOLO: preproceso, lectura de la salida y motor ONNX Runtime (con pruebas). |
+| `modules/image-tensor/` | Módulo nativo de Expo (Kotlin, Android) que convierte la foto en el tensor de LMD-YOLO y lee memoria, temperatura y estado térmico del celular. |
 | `src/domain/` | Tipos, etiquetas en español, estados y códigos de reporte (con pruebas). |
 | `src/components/` | Tarjetas de reporte y foto con datos superpuestos. |
 | `src/ui/` | Componentes visuales base (botones, campos, etiquetas, cabeceras). |
@@ -52,12 +63,15 @@ digital, preferencias de avisos) muestran el aviso "disponible próximamente".
 Necesitas Node.js 20 o superior y la app **Expo Go** instalada en el celular Android (Play Store).
 La PC y el celular deben estar en la **misma red Wi-Fi**.
 
+1. Levanta el backend (repositorio ViaDeep-backend): `docker compose up -d` y luego los servicios
    auth (8081), incidents (8082), evidences (8083) y notifications (8084).
-   auth (8081), incidents (8082) y evidences (8083).
    Para que el celular pueda ver las fotos, inicia `evidence-service` con
    `S3_ENDPOINT=http://<IP-de-tu-PC>:9000`.
 2. Averigua la IP de tu PC en la red Wi-Fi (en Windows: `ipconfig`, línea "Dirección IPv4").
 3. En esta carpeta copia `.env.example` como `.env` y reemplaza `192.168.1.50` por esa IP.
+   Si después la IP de la PC cambia, la app usa sola la nueva: toma la IP con la que el celular llega a Expo
+   (solo para direcciones locales; un backend en internet se usa tal cual). Las fotos sí dependen de
+   `S3_ENDPOINT` en `evidence-service`, así que ese servicio hay que reiniciarlo con la IP nueva.
 4. Instala las dependencias y arranca:
 
    ```bash

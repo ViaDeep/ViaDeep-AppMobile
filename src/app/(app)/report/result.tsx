@@ -20,6 +20,7 @@ import { inferenceEngine } from '@/inference/engine';
 import { acceptedDetection, DESCRIPTION_MAX_LENGTH, manualReason, submitReport } from '@/services/report-service';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
+import { DamageHelpButton } from '@/ui/damage-help';
 import { Icon } from '@/ui/icon';
 import { BackHeader } from '@/ui/top-bar';
 
@@ -168,6 +169,7 @@ export default function ResultScreen() {
                   <View style={styles.tileValueRow}>
                     <Icon name={TYPE_ICONS[detection.type]} size={16} color={colors.text} />
                     <Text style={styles.tileValue}>{TYPE_LABELS[detection.type]}</Text>
+                    <DamageHelpButton type={detection.type} />
                   </View>
                 </View>
                 <SeverityTile half />
@@ -185,7 +187,8 @@ export default function ResultScreen() {
                         onPress={() => flow.update({ manualType: option })}
                         style={[styles.option, selected && styles.optionSelected]}>
                         <Icon name={TYPE_ICONS[option]} size={18} color={selected ? colors.white : colors.primary} />
-                        <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{TYPE_LABELS[option]}</Text>
+                        <Text style={[styles.optionText, styles.optionTextFill, selected && styles.optionTextSelected]}>{TYPE_LABELS[option]}</Text>
+                        <DamageHelpButton type={option} color={selected ? colors.white : colors.primary} />
                       </Pressable>
                     );
                   })}
@@ -402,6 +405,7 @@ const styles = StyleSheet.create({
   },
   optionSelected: { backgroundColor: colors.navy, borderColor: colors.navy },
   optionText: { flexShrink: 1, fontFamily: fonts.semibold, fontSize: 13, lineHeight: 17, color: colors.text },
+  optionTextFill: { flex: 1 },
   optionTextSelected: { color: colors.white },
   confidence: {
     gap: 6,

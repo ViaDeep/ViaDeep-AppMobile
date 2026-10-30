@@ -15,6 +15,7 @@ import { addressFor } from '@/services/location';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
 import { comingSoon } from '@/ui/coming-soon';
+import { DamageHelpButton } from '@/ui/damage-help';
 import { Icon } from '@/ui/icon';
 import { StatusBadge } from '@/ui/status-badge';
 import { BackHeader } from '@/ui/top-bar';
@@ -125,7 +126,10 @@ export default function ReportDetailScreen() {
               </View>
               <View style={styles.flexShrink}>
                 <Text style={styles.eyebrow}>TIPO DE DAÑO</Text>
-                <Text style={styles.typeText}>{TYPE_LABELS[incident.type]}</Text>
+                <View style={styles.typeTextRow}>
+                  <Text style={styles.typeText}>{TYPE_LABELS[incident.type]}</Text>
+                  <DamageHelpButton type={incident.type} />
+                </View>
               </View>
             </View>
             <StatusBadge status={status} />
@@ -341,6 +345,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   eyebrow: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.5, color: colors.textSecondary },
+  typeTextRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   typeText: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 24, color: colors.text },
   metaBlock: { gap: 8, paddingTop: 5, borderTopWidth: 1, borderTopColor: colors.border },
   addressRow: { flexDirection: 'row', gap: 8 },

@@ -4,9 +4,11 @@ import type { InferenceSession, Tensor } from 'onnxruntime-react-native';
 import { NativeModules } from 'react-native';
 import UPNG from 'upng-js';
 
+import ImageTensor from '../../modules/image-tensor';
+
 import type { Detection, InferenceEngine } from './inference-engine';
 import { bestDetection } from './postprocessing';
-import { letterbox, MODEL_INPUT_SIZE, toInputTensor } from './preprocessing';
+import { letterbox, MODEL_INPUT_SIZE, toInputTensor, type Letterbox } from './preprocessing';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const MODEL = require('../../assets/models/lmd-yolo.onnx');
@@ -46,8 +48,13 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-/** Redimensiona la foto con el letterbox de LMD-YOLO y devuelve sus píxeles RGBA. */
-async function readPixels(imageUri: string) {
+/** Milisegundos de la decodificación y del letterbox dentro del código nativo. */
+export type NativeTimes = { decode: number; letterbox: number };
+
+type Pixels = { box: Letterbox; tensor: () => Float32Array; native: NativeTimes | null };
+
+/** Redimensiona la foto con el letterbox de LMD-YOLO y devuelve sus píxeles RGBA (camino en JavaScript). */
+async function readPixelsJs(imageUri: string): Promise<Pixels> {
   const original = await ImageManipulator.manipulate(imageUri).renderAsync();
   const box = letterbox(original.width, original.height, MODEL_INPUT_SIZE);
   const resized = await ImageManipulator.manipulate(imageUri).resize({ width: box.resizedWidth, height: box.resizedHeight }).renderAsync();
@@ -59,26 +66,65 @@ async function readPixels(imageUri: string) {
     throw new Error('La foto redimensionada no tiene el tamaño esperado');
   }
   const rgba = new Uint8Array(UPNG.toRGBA8(decoded)[0]);
-  return { box, rgba };
+  return { box, tensor: () => toInputTensor(rgba, box), native: null };
+}
+
+/**
+ * Prepara la foto en Kotlin (módulo ImageTensor): el tensor llega armado y aquí solo se lee como float32. En un APK
+ * sin ese módulo, o si falla, se usa el camino en JavaScript; `native` queda en null para saber cuál se usó.
+ */
+async function readPixels(imageUri: string): Promise<Pixels> {
+  if (!ImageTensor) return readPixelsJs(imageUri);
+  try {
+    return await readPixelsNative(ImageTensor, imageUri);
+  } catch {
+    return readPixelsJs(imageUri);
+  }
+}
+
+async function readPixelsNative(module: NonNullable<typeof ImageTensor>, imageUri: string): Promise<Pixels> {
+  const result = await module.letterbox(imageUri);
+  const box: Letterbox = {
+    sourceWidth: result.sourceWidth,
+    sourceHeight: result.sourceHeight,
+    scale: Math.min(MODEL_INPUT_SIZE / result.sourceHeight, MODEL_INPUT_SIZE / result.sourceWidth),
+    resizedWidth: result.resizedWidth,
+    resizedHeight: result.resizedHeight,
+    padLeft: result.padLeft,
+    padTop: result.padTop,
+  };
+  const length = 3 * MODEL_INPUT_SIZE * MODEL_INPUT_SIZE;
+  if (result.tensor.byteLength !== length * 4) throw new Error('El tensor de la foto no tiene el tamaño esperado');
+  const bytes = result.tensor;
+  // Float32Array necesita un inicio múltiplo de 4; si no lo es, se copia.
+  const tensor = () =>
+    bytes.byteOffset % 4 === 0 ? new Float32Array(bytes.buffer, bytes.byteOffset, length) : new Float32Array(bytes.slice().buffer);
+  return { box, tensor, native: { decode: result.decodeMs, letterbox: result.letterboxMs } };
 }
 
 /** Milisegundos de cada etapa de una detección, para medir la latencia en el celular. */
 export type StageTimes = { pixels: number; tensor: number; inference: number; postprocess: number; total: number };
 
 /** Ejecuta el mismo camino que `detect` sobre una foto y cronometra cada etapa. */
-export async function timedDetect(imageUri: string): Promise<{ detection: Detection | null; times: StageTimes }> {
+export async function timedDetect(
+  imageUri: string,
+): Promise<{ detection: Detection | null; times: StageTimes; native: NativeTimes | null }> {
   const model = await loadSession();
   if (!ort) throw new Error('ONNX Runtime no está disponible');
   const t0 = performance.now();
-  const { box, rgba } = await readPixels(imageUri);
+  const { box, tensor, native } = await readPixels(imageUri);
   const t1 = performance.now();
-  const input: Tensor = new ort.Tensor('float32', toInputTensor(rgba, box), [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
+  const input: Tensor = new ort.Tensor('float32', tensor(), [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
   const t2 = performance.now();
   const result = await model.run({ [model.inputNames[0]]: input });
   const t3 = performance.now();
   const detection = bestDetection(result[model.outputNames[0]].data as Float32Array, box);
   const t4 = performance.now();
-  return { detection, times: { pixels: t1 - t0, tensor: t2 - t1, inference: t3 - t2, postprocess: t4 - t3, total: t4 - t0 } };
+  return {
+    detection,
+    times: { pixels: t1 - t0, tensor: t2 - t1, inference: t3 - t2, postprocess: t4 - t3, total: t4 - t0 },
+    native,
+  };
 }
 
 /** Milisegundos que tarda en cargar el modelo la primera vez (0 si ya estaba cargado). */
@@ -92,9 +138,9 @@ export async function sessionLoadTime(): Promise<number> {
 export const onnxInferenceEngine: InferenceEngine = {
   available: true,
   async detect(imageUri: string): Promise<Detection | null> {
-    const [model, { box, rgba }] = await Promise.all([loadSession(), readPixels(imageUri)]);
+    const [model, { box, tensor }] = await Promise.all([loadSession(), readPixels(imageUri)]);
     if (!ort) throw new Error('ONNX Runtime no está disponible');
-    const input: Tensor = new ort.Tensor('float32', toInputTensor(rgba, box), [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
+    const input: Tensor = new ort.Tensor('float32', tensor(), [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
     const result = await model.run({ [model.inputNames[0]]: input });
     const output = result[model.outputNames[0]];
     return bestDetection(output.data as Float32Array, box);
