@@ -22,8 +22,8 @@ export const env = {
   evidencesUrl: readUrl(process.env.EXPO_PUBLIC_EVIDENCES_URL, 'http://localhost:8083'),
   /** Si no se configura, se usa la misma PC que incidencias con el puerto 8084. */
   notificationsUrl: readUrl(process.env.EXPO_PUBLIC_NOTIFICATIONS_URL, incidentsUrl.replace(/:8082$/, ':8084')),
-  /** Confianza mínima de LMD-YOLO para registrar el reporte como validado por IA (RF de OB2). */
-  aiConfidenceThreshold: Number(process.env.EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD ?? '0.5'),
+  /** Confianza mínima de LMD-YOLO para aceptar la detección; por debajo se pide otra foto. */
+  aiConfidenceThreshold: Number(process.env.EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD ?? '0.75'),
   /** Correo de la mesa de ayuda que se muestra en "Ayuda y soporte". Si está vacío no se muestra. */
   supportEmail: (process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? '').trim(),
 } as const;

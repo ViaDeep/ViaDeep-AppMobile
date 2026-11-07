@@ -11,7 +11,10 @@ export type ReportDraft = {
   photoUri: string;
   coordinates: Coordinates;
   detection: Detection | null;
-  /** Tipo elegido por el ciudadano; obligatorio cuando no hay detección válida. */
+  /**
+   * Tipo elegido a mano. La app ya no lo ofrece: queda solo para enviar reportes guardados sin conexión por una
+   * versión anterior.
+   */
   manualType: IncidentType | null;
   description: string;
 };
@@ -28,19 +31,19 @@ export function acceptedDetection(detection: Detection | null, threshold: number
 }
 
 /**
- * Explica al ciudadano por qué le toca elegir el tipo de daño: sin modelo en el celular, sin ninguna detección o
- * con una detección por debajo del umbral.
+ * Explica al ciudadano por qué debe tomar otra foto: sin modelo en el celular, sin ninguna detección o con una
+ * detección por debajo del umbral.
  */
-export function manualReason(modelAvailable: boolean, detection: Detection | null, threshold: number): string {
+export function retakeReason(modelAvailable: boolean, detection: Detection | null, threshold: number): string {
   const required = `${Math.round(threshold * 100)} %`;
   if (!modelAvailable) {
-    return 'Este celular no tiene el modelo de IA instalado, así que elige tú el tipo de daño.';
+    return 'Este celular no tiene el modelo de IA instalado, así que no puede analizar la foto.';
   }
   if (!detection) {
-    return `La IA no reconoció ningún daño en la foto con al menos ${required} de seguridad. Elige tú el tipo de daño.`;
+    return `La IA no reconoció ningún daño en la foto con al menos ${required} de seguridad. Toma otra foto del daño, de cerca y con buena luz.`;
   }
   const percent = `${(detection.confidence * 100).toFixed(0)} %`;
-  return `La IA solo tuvo ${percent} de seguridad y se necesita al menos ${required}. Elige tú el tipo de daño.`;
+  return `La IA solo tuvo ${percent} de seguridad y se necesita al menos ${required}. Toma otra foto del daño, de cerca y con buena luz.`;
 }
 
 export function buildIncidentRequest(
@@ -61,7 +64,7 @@ export function buildIncidentRequest(
     return { ...base, type, aiValidated: true, aiResult };
   }
   if (!draft.manualType) {
-    throw new Error('Elige el tipo de daño antes de enviar el reporte.');
+    throw new Error('La IA no reconoció el daño con suficiente seguridad. Toma otra foto antes de enviar el reporte.');
   }
   return { ...base, type: draft.manualType, aiValidated: false };
 }

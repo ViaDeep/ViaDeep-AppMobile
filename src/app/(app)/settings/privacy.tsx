@@ -31,7 +31,7 @@ const DATA_WE_USE: DataItem[] = [
   {
     icon: 'memory',
     title: 'Análisis con IA en el celular',
-    body: 'La detección del tipo de daño con el modelo LMD-YOLO se hará dentro de tu celular (on-device), sin enviar la foto a un servidor externo para analizarla. Mientras se integra, eliges el tipo de daño a mano.',
+    body: 'El modelo LMD-YOLO reconoce el tipo de daño dentro de tu celular (on-device), sin enviar la foto a un servidor externo para analizarla. Solo acepta resultados con al menos 75 % de seguridad.',
   },
 ];
 

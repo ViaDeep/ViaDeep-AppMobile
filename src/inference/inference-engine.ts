@@ -20,8 +20,8 @@ export interface InferenceEngine {
 }
 
 /**
- * Motor usado mientras el modelo .onnx no está integrado: no detecta nada, por lo que la app sigue
- * el flujo manual (el ciudadano elige el tipo de daño).
+ * Motor usado cuando la app no trae ONNX Runtime (Expo Go): no detecta nada, así que la app pide otra foto y
+ * avisa que el celular no tiene el modelo.
  */
 export const pendingInferenceEngine: InferenceEngine = {
   available: false,

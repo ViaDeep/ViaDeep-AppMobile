@@ -35,9 +35,9 @@ const FAQ: { question: string; answer: string }[] = [
       'Queda Registrado y lo recibe la municipalidad. Un operador lo revisa, le asigna una prioridad y lo pasa a En proceso cuando programa la reparación. Al terminar, el estado cambia a Resuelto.',
   },
   {
-    question: '¿Por qué la app dice "Modo manual"?',
+    question: '¿Por qué la app me pide tomar otra foto?',
     answer:
-      'El modelo de IA que reconoce el tipo de daño aún se está integrando. Mientras tanto eliges el tipo de daño tú mismo y el reporte se registra igual.',
+      'La IA de tu celular solo acepta un resultado cuando tiene al menos 75 % de seguridad, para no enviar a la municipalidad una clasificación dudosa. Acércate al daño, evita sombras fuertes y vuelve a tomar la foto.',
   },
   {
     question: '¿Por qué rechazaron mi reporte?',

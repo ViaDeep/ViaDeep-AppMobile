@@ -1,5 +1,5 @@
 import type { Detection } from '@/inference/inference-engine';
-import { buildIncidentRequest, manualReason, submitReport, type ReportDraft } from '@/services/report-service';
+import { buildIncidentRequest, retakeReason, submitReport, type ReportDraft } from '@/services/report-service';
 
 const detection: Detection = { type: 'D40', confidence: 0.82, bboxX: 0.1, bboxY: 0.2, bboxWidth: 0.3, bboxHeight: 0.4 };
 
@@ -28,7 +28,7 @@ describe('buildIncidentRequest', () => {
     });
   });
 
-  it('usa el tipo manual cuando la detección no alcanza el umbral', () => {
+  it('envía el tipo manual de un reporte guardado sin conexión por una versión anterior', () => {
     const request = buildIncidentRequest(
       draft({ detection: { ...detection, confidence: 0.3 }, manualType: 'D00' }),
       'ev-1',
@@ -40,8 +40,8 @@ describe('buildIncidentRequest', () => {
     expect(request.aiResult).toBeUndefined();
   });
 
-  it('exige el tipo manual cuando no hay detección', () => {
-    expect(() => buildIncidentRequest(draft(), 'ev-1', 0.5)).toThrow('Elige el tipo de daño');
+  it('pide otra foto cuando no hay detección', () => {
+    expect(() => buildIncidentRequest(draft(), 'ev-1', 0.5)).toThrow('Toma otra foto');
   });
 
   it('envía la descripción sin espacios y la omite si está vacía', () => {
@@ -80,20 +80,27 @@ describe('submitReport', () => {
   });
 });
 
-describe('manualReason', () => {
-  const low: Detection = { type: 'D40', confidence: 0.347, bboxX: 0, bboxY: 0, bboxWidth: 1, bboxHeight: 1 };
+describe('retakeReason', () => {
+  const low: Detection = { type: 'D40', confidence: 0.597, bboxX: 0, bboxY: 0, bboxWidth: 1, bboxHeight: 1 };
 
   it('avisa si el celular no tiene el modelo', () => {
-    expect(manualReason(false, null, 0.5)).toBe('Este celular no tiene el modelo de IA instalado, así que elige tú el tipo de daño.');
+    expect(retakeReason(false, null, 0.75)).toBe('Este celular no tiene el modelo de IA instalado, así que no puede analizar la foto.');
   });
 
-  it('avisa si la IA no encontró ningún daño', () => {
-    expect(manualReason(true, null, 0.5)).toBe(
-      'La IA no reconoció ningún daño en la foto con al menos 50 % de seguridad. Elige tú el tipo de daño.',
+  it('pide otra foto si la IA no encontró ningún daño', () => {
+    expect(retakeReason(true, null, 0.75)).toBe(
+      'La IA no reconoció ningún daño en la foto con al menos 75 % de seguridad. Toma otra foto del daño, de cerca y con buena luz.',
     );
   });
 
   it('muestra la seguridad obtenida y la necesaria cuando no llega al umbral', () => {
-    expect(manualReason(true, low, 0.5)).toBe('La IA solo tuvo 35 % de seguridad y se necesita al menos 50 %. Elige tú el tipo de daño.');
+    expect(retakeReason(true, low, 0.75)).toBe(
+      'La IA solo tuvo 60 % de seguridad y se necesita al menos 75 %. Toma otra foto del daño, de cerca y con buena luz.',
+    );
+  });
+
+  it('una detección de 59.7 % no basta con el umbral de 75 %', () => {
+    const request = () => buildIncidentRequest(draft({ detection: low }), 'ev', 0.75);
+    expect(request).toThrow('Toma otra foto');
   });
 });

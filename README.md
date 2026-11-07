@@ -22,9 +22,9 @@ caja de mayor confianza (`src/inference/postprocessing.ts`). La foto se prepara 
 ecuaciones que `docs/canonical_mobile_preprocessing.md` del repositorio LMD-YOLO. Da el mismo tensor bit a bit
 que `scripts/generate_canonical_mobile_golden.py`. En un APK anterior a ese módulo, la app vuelve al camino
 en JavaScript (`src/inference/preprocessing.ts`), que es más lento. Si la
-confianza es menor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD` (0.5 por defecto), el ciudadano elige el tipo
-de daño. ONNX Runtime es código nativo, así que en Expo Go la app sigue en "MODO MANUAL"; para usar el
-modelo se instala el APK de desarrollo (ver más abajo).
+confianza es menor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD` (0.75 por defecto), la app no clasifica el daño
+y pide tomar otra foto. ONNX Runtime es código nativo, así que en Expo Go la app muestra "IA NO DISPONIBLE" y no
+puede enviar reportes; para usar el modelo se instala el APK de desarrollo (ver más abajo).
 
 En Perfil > Ayuda y soporte hay dos pantallas para el paper: "Medir rendimiento del modelo" (latencia por foto)
 y "Prueba de uso continuo", que detecta una foto tras otra durante 15 o 30 minutos y cada 30 s anota la memoria

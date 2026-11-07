@@ -9,12 +9,12 @@ import { Chip } from './chip';
 import { Icon } from './icon';
 import { LogoMark } from './logo';
 
-/** Chip que indica si el modelo de IA corre en el celular o si la app está en modo manual. */
+/** Chip que indica si el modelo de IA corre en el celular. */
 export function EngineChip() {
   return inferenceEngine.available ? (
     <Chip label="NPU ACTIVO" dot={colors.success} background={colors.surfaceBlue} border={colors.borderSoft} color={colors.navy} style={styles.centered} />
   ) : (
-    <Chip label="MODO MANUAL" dot={colors.warning} background={colors.surfaceBlue} border={colors.borderSoft} color={colors.navy} style={styles.centered} />
+    <Chip label="IA NO DISPONIBLE" dot={colors.warning} background={colors.surfaceBlue} border={colors.borderSoft} color={colors.navy} style={styles.centered} />
   );
 }
 
