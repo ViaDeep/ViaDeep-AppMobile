@@ -127,7 +127,7 @@ export default function LoginScreen() {
               Al continuar, aceptas los <Text style={styles.underline}>Términos y Condiciones</Text> y la{' '}
               <Text style={styles.underline}>Política de Privacidad</Text> de la Municipalidad de Lima.
             </Text>
-            <Chip label="ViaDeep v2.4 · Lima Metropolitana" dot={colors.primary} shape="tag" border="rgba(197,198,207,0.5)" style={styles.version} />
+            <Chip label="ViaDeep v2.4" dot={colors.primary} shape="tag" border="rgba(197,198,207,0.5)" style={styles.version} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
