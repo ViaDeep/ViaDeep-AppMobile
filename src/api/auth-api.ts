@@ -43,6 +43,17 @@ export const authApi = {
     }
   },
 
+  /** Entra con el token de identidad de Google o Microsoft; si el correo no tiene cuenta, el backend la crea. */
+  async socialLogin(provider: 'google' | 'microsoft', idToken: string): Promise<string> {
+    try {
+      const { data } = await client.post<{ accessToken: string }>(`/auth/${provider}`, { idToken });
+      return data.accessToken;
+    } catch (error) {
+      // 401 token no válido, 403 cuenta de operador o desactivada, 503 proveedor sin configurar: traen su mensaje.
+      throw toApiError(error);
+    }
+  },
+
   /** Confirma el correo con el código y devuelve el token de la sesión, como el login. */
   async verifyEmail(email: string, code: string): Promise<string> {
     try {
