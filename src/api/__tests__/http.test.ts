@@ -20,6 +20,16 @@ describe('toApiError', () => {
     expect(toApiError(httpError(503, { detail: 'x' })).message).toMatch('no está disponible');
   });
 
+  it('conserva el código y el mensaje del backend para casos especiales', () => {
+    const error = toApiError(
+      httpError(403, { detail: 'Confirma tu correo con el código que te enviamos', code: 'EMAIL_NOT_VERIFIED' }),
+    );
+
+    expect(error.code).toBe('EMAIL_NOT_VERIFIED');
+    expect(error.message).toBe('Confirma tu correo con el código que te enviamos');
+    expect(toApiError(httpError(429, { detail: 'Espera 42 segundos antes de pedir otro código' })).message).toMatch('42');
+  });
+
   it('reconoce la falta de conexión', () => {
     expect(toApiError(new AxiosError('Network Error')).message).toMatch('No se pudo conectar');
   });
