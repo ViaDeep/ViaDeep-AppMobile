@@ -1,4 +1,5 @@
 import { CameraView, useCameraPermissions, type FlashMode } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -136,6 +137,24 @@ export default function CameraScreen() {
     }
   }
 
+  async function pickFromGallery() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+      if (result.canceled || !result.assets[0]) return;
+      await continueWithPhoto(result.assets[0].uri);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Se registra la ubicación actual del ciudadano, que debe estar junto a la incidencia. */
+  async function continueWithPhoto(photoUri: string) {
+    const found = await ensureLocation(() => void continueWithPhoto(photoUri));
+    if (found) await goToPreview(photoUri, found);
+  }
+
   function nextFlash() {
     setFlash((current) => FLASH_ORDER[(FLASH_ORDER.indexOf(current) + 1) % FLASH_ORDER.length]);
   }
@@ -234,8 +253,10 @@ export default function CameraScreen() {
             <Text style={styles.safetyText}>Ubícate a una distancia segura de la incidencia antes de tomar la fotografía.</Text>
           </View>
           <View style={styles.controls}>
-            {/* Sin galería: la evidencia se toma en el momento con la cámara. El espacio mantiene el obturador centrado. */}
-            <View style={styles.sideSpacer} />
+            <Pressable accessibilityRole="button" onPress={pickFromGallery} style={styles.sideButton}>
+              <Icon name="photo-library" size={20} color={colors.white} />
+              <Text style={styles.sideLabel}>Galería</Text>
+            </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Tomar fotografía" onPress={takePhoto} disabled={busy} style={styles.shutterRing}>
               <View style={styles.shutter}>
                 {busy ? <ActivityIndicator color={colors.primary} /> : <Icon name="photo-camera" size={28} color={colors.primary} />}
@@ -397,7 +418,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 2,
   },
-  sideSpacer: { width: 64, height: 64 },
   sideButtonActive: { backgroundColor: 'rgba(0,111,240,0.45)', borderColor: colors.primaryBright },
   sideLabel: { fontFamily: fonts.monoBold, fontSize: 9, lineHeight: 10, letterSpacing: 0.54, color: '#CBD5E1' },
   shutterRing: {
