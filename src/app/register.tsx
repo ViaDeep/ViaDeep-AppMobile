@@ -1,12 +1,10 @@
-import { Redirect, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { authApi } from '@/api/auth-api';
-import { SocialSignInButtons } from '@/components/social-sign-in-buttons';
 import { colors, fonts } from '@/constants/theme';
-import { useSession } from '@/session/session-context';
 import { AuthBackdrop } from '@/ui/auth-backdrop';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
@@ -25,12 +23,6 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
-  const { user } = useSession();
-
-  // Al entrar con Google u Outlook la sesión ya queda abierta.
-  if (user) {
-    return <Redirect href="/" />;
-  }
 
   async function handleSubmit() {
     const found: Errors = {};
@@ -105,15 +97,6 @@ export default function RegisterScreen() {
             <Button title="Crear cuenta" icon="arrow-forward" iconPosition="right" onPress={handleSubmit} loading={loading} style={styles.submit} />
           </View>
 
-          <View style={styles.divider}>
-            <View style={styles.line} />
-            <Text style={styles.dividerText}>o regístrate con</Text>
-            <View style={styles.line} />
-          </View>
-          <View style={styles.social}>
-            <SocialSignInButtons onError={(message) => setErrors(message ? { form: message } : {})} disabled={loading} />
-          </View>
-
           <View style={styles.loginRow}>
             <Text style={styles.loginText}>¿Ya tienes una cuenta?</Text>
             <Pressable onPress={() => router.back()} hitSlop={8}>
@@ -139,10 +122,6 @@ const styles = StyleSheet.create({
   form: { gap: 16 },
   error: { fontFamily: fonts.medium, fontSize: 13, color: colors.danger },
   submit: { marginTop: 8 },
-  divider: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 12 },
-  line: { flex: 1, height: 1, backgroundColor: colors.borderSoft },
-  dividerText: { fontFamily: fonts.medium, fontSize: 12, color: colors.textSecondary },
-  social: { marginTop: 16 },
   loginRow: { flexDirection: 'row', justifyContent: 'center', gap: 4, marginTop: 24 },
   loginText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   loginLink: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.primary },

@@ -26,8 +26,4 @@ export const env = {
   aiConfidenceThreshold: Number(process.env.EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD ?? '0.5'),
   /** Correo de la mesa de ayuda que se muestra en "Ayuda y soporte". Si está vacío no se muestra. */
   supportEmail: (process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? '').trim(),
-  /** ID de cliente OAuth de Google de tipo "Aplicación web" (el mismo que GOOGLE_CLIENT_IDS del backend). */
-  googleWebClientId: (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '').trim(),
-  /** ID de aplicación registrado en Microsoft Entra (el mismo que MICROSOFT_CLIENT_ID del backend). */
-  microsoftClientId: (process.env.EXPO_PUBLIC_MICROSOFT_CLIENT_ID ?? '').trim(),
 } as const;

@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { authApi } from '@/api/auth-api';
 import { ApiError } from '@/api/http';
-import { SocialSignInButtons } from '@/components/social-sign-in-buttons';
 import { colors, fonts } from '@/constants/theme';
 import { useSession } from '@/session/session-context';
 import { AuthBackdrop } from '@/ui/auth-backdrop';
@@ -106,10 +105,6 @@ export default function LoginScreen() {
             <View style={styles.line} />
           </View>
 
-          <View style={styles.social}>
-            <SocialSignInButtons onError={setError} disabled={loading} />
-          </View>
-
           <Button
             title="DNIe / Identidad Digital Nacional"
             variant="outline"
@@ -156,8 +151,7 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 12 },
   line: { flex: 1, height: 1, backgroundColor: colors.borderSoft },
   dividerText: { fontFamily: fonts.medium, fontSize: 12, color: colors.textSecondary },
-  social: { marginTop: 16 },
-  dni: { height: 44, marginTop: 12 },
+  dni: { height: 44, marginTop: 16 },
   registerRow: { flexDirection: 'row', justifyContent: 'center', gap: 4, marginTop: 24 },
   registerText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
   registerLink: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 20, color: colors.primary },
