@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { evidenceApi } from '@/api/evidence-api';
@@ -11,13 +11,13 @@ import { env } from '@/config/env';
 import { colors, fonts } from '@/constants/theme';
 import { descriptionProblem } from '@/domain/description-policy';
 import { dayAndClock, formatCoordinates, longDate } from '@/domain/display';
-import { INCIDENT_TYPES, TYPE_LABELS, type IncidentType } from '@/domain/incident';
+import { TYPE_LABELS } from '@/domain/incident';
 import { TYPE_ICONS } from '@/domain/type-icons';
 import { usePendingReports } from '@/offline/pending-reports-context';
 import { useReportFlow } from '@/report-flow/report-flow';
 import { useReports } from '@/reports/reports-context';
 import { inferenceEngine } from '@/inference/engine';
-import { acceptedDetection, DESCRIPTION_MAX_LENGTH, manualReason, submitReport } from '@/services/report-service';
+import { acceptedDetection, DESCRIPTION_MAX_LENGTH, noDetectionReason, submitReport } from '@/services/report-service';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
 import { DamageHelpButton } from '@/ui/damage-help';
@@ -35,9 +35,8 @@ export default function ResultScreen() {
     return <Redirect href="/report/camera" />;
   }
 
-  // Solo cuenta como detección de IA si supera el umbral; si no, el ciudadano elige el tipo.
+  // El tipo de daño lo reconoce siempre LMD-YOLO: sin una detección sobre el umbral no se puede enviar.
   const detection = acceptedDetection(flow.detection, env.aiConfidenceThreshold);
-  const type: IncidentType | null = detection?.type ?? flow.manualType;
   const percent = detection ? (detection.confidence * 100).toFixed(1) : null;
   const place = capture.address ?? formatCoordinates(capture.coordinates.latitude, capture.coordinates.longitude);
 
@@ -52,7 +51,7 @@ export default function ResultScreen() {
     setSending(true);
     try {
       const id = await submitReport(
-        { ...capture, detection: flow.detection, manualType: flow.manualType, description: flow.description },
+        { ...capture, detection: flow.detection, description: flow.description },
         {
           uploadEvidence: evidenceApi.upload,
           registerIncident: incidentApi.register,
@@ -85,7 +84,6 @@ export default function ResultScreen() {
         address: capture.address,
         capturedAt: capture.capturedAt,
         detection: flow.detection,
-        manualType: flow.manualType,
         description: flow.description,
       });
     } catch {
@@ -111,7 +109,7 @@ export default function ResultScreen() {
           detection ? (
             <Chip label="Listo" icon="task-alt" background="rgba(0,39,24,0.1)" border="rgba(78,222,163,0.3)" color={colors.success} />
           ) : (
-            <Chip label="Manual" icon="touch-app" background={colors.warningSurface} border={colors.warningBorder} color={colors.warningText} />
+            <Chip label="Sin detección" icon="search-off" background={colors.warningSurface} border={colors.warningBorder} color={colors.warningText} />
           )
         }
       />
@@ -139,25 +137,25 @@ export default function ResultScreen() {
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderLeft}>
                 <View style={styles.cardIcon}>
-                  <Icon name={detection ? 'policy' : 'touch-app'} size={16} color={colors.primary} />
+                  <Icon name={detection ? 'policy' : 'search-off'} size={16} color={colors.primary} />
                 </View>
                 <View style={styles.flexShrink}>
-                  <Text style={styles.cardTitle}>{detection ? 'Incidencia detectada' : 'Elige el tipo de daño'}</Text>
+                  <Text style={styles.cardTitle}>{detection ? 'Incidencia detectada' : 'No se detectó un daño'}</Text>
                   <Text style={styles.cardSubtitle}>
-                    {detection ? 'Revisión automática de calzada' : 'No hubo una detección automática confiable'}
+                    {detection ? 'Revisión automática de calzada' : 'Toma otra foto para continuar'}
                   </Text>
                 </View>
               </View>
               <View style={styles.modelChip}>
-                <Text style={styles.modelChipText}>{detection ? 'LMD-YOLO' : 'MANUAL'}</Text>
+                <Text style={styles.modelChipText}>LMD-YOLO</Text>
               </View>
             </View>
 
             {detection ? null : (
-              <View style={styles.manualNotice}>
+              <View style={styles.notice}>
                 <Icon name="info" size={14} color={colors.warningText} />
-                <Text style={styles.manualNoticeText}>
-                  {manualReason(inferenceEngine.available, flow.detection, env.aiConfidenceThreshold)}
+                <Text style={styles.noticeText}>
+                  {noDetectionReason(inferenceEngine.available, flow.detection, env.aiConfidenceThreshold)}
                 </Text>
               </View>
             )}
@@ -174,28 +172,7 @@ export default function ResultScreen() {
                 </View>
                 <SeverityTile half />
               </View>
-            ) : (
-              <>
-                <View style={styles.options}>
-                  {INCIDENT_TYPES.map((option) => {
-                    const selected = flow.manualType === option;
-                    return (
-                      <Pressable
-                        key={option}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected }}
-                        onPress={() => flow.update({ manualType: option })}
-                        style={[styles.option, selected && styles.optionSelected]}>
-                        <Icon name={TYPE_ICONS[option]} size={18} color={selected ? colors.white : colors.primary} />
-                        <Text style={[styles.optionText, styles.optionTextFill, selected && styles.optionTextSelected]}>{TYPE_LABELS[option]}</Text>
-                        <DamageHelpButton type={option} color={selected ? colors.white : colors.primary} />
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                <SeverityTile />
-              </>
-            )}
+            ) : null}
 
             {detection && percent ? (
               <View style={styles.confidence}>
@@ -222,58 +199,66 @@ export default function ResultScreen() {
             </View>
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.descriptionHead}>
-              <Text style={styles.descriptionLabel}>Descripción (opcional)</Text>
-              <Text style={styles.descriptionCount}>
-                {flow.description.length}/{DESCRIPTION_MAX_LENGTH}
-              </Text>
+          {detection ? (
+            <>
+            <View style={styles.card}>
+              <View style={styles.descriptionHead}>
+                <Text style={styles.descriptionLabel}>Descripción (opcional)</Text>
+                <Text style={styles.descriptionCount}>
+                  {flow.description.length}/{DESCRIPTION_MAX_LENGTH}
+                </Text>
+              </View>
+              <TextInput
+                accessibilityLabel="Descripción de la incidencia"
+                value={flow.description}
+                onChangeText={(text) => flow.update({ description: text })}
+                maxLength={DESCRIPTION_MAX_LENGTH}
+                multiline
+                placeholder="Ej. El bache ocupa todo el carril derecho, frente al paradero."
+                placeholderTextColor={colors.placeholder}
+                style={[styles.descriptionInput, descriptionError ? styles.descriptionInputError : null]}
+                editable={!sending}
+              />
+              {descriptionError ? (
+                <Text style={styles.descriptionError}>{descriptionError}</Text>
+              ) : (
+                <Text style={styles.descriptionHint}>Puedes agregar detalles que ayuden a ubicar o evaluar el daño.</Text>
+              )}
             </View>
-            <TextInput
-              accessibilityLabel="Descripción de la incidencia"
-              value={flow.description}
-              onChangeText={(text) => flow.update({ description: text })}
-              maxLength={DESCRIPTION_MAX_LENGTH}
-              multiline
-              placeholder="Ej. El bache ocupa todo el carril derecho, frente al paradero."
-              placeholderTextColor={colors.placeholder}
-              style={[styles.descriptionInput, descriptionError ? styles.descriptionInputError : null]}
-              editable={!sending}
-            />
-            {descriptionError ? (
-              <Text style={styles.descriptionError}>{descriptionError}</Text>
-            ) : (
-              <Text style={styles.descriptionHint}>Puedes agregar detalles que ayuden a ubicar o evaluar el daño.</Text>
-            )}
-          </View>
 
-          <View style={styles.disclaimer}>
-            <View style={styles.disclaimerIcon}>
-              <Icon name="account-balance" size={15} color={colors.white} />
+            <View style={styles.disclaimer}>
+              <View style={styles.disclaimerIcon}>
+                <Icon name="account-balance" size={15} color={colors.white} />
+              </View>
+              <View style={styles.flexShrink}>
+                <Text style={styles.disclaimerTitle}>Municipalidad Metropolitana de Lima</Text>
+                <Text style={styles.disclaimerText}>
+                  Esta clasificación es generada automáticamente por el modelo de inteligencia artificial y será enviada junto con
+                  tu reporte para acelerar la inspección municipal.
+                </Text>
+              </View>
             </View>
-            <View style={styles.flexShrink}>
-              <Text style={styles.disclaimerTitle}>Municipalidad Metropolitana de Lima</Text>
-              <Text style={styles.disclaimerText}>
-                {detection
-                  ? 'Esta clasificación es generada automáticamente por el modelo de inteligencia artificial y será enviada junto con tu reporte para acelerar la inspección municipal.'
-                  : 'El tipo de daño que elijas se enviará con tu reporte y será verificado por el equipo técnico durante la inspección municipal.'}
-              </Text>
-            </View>
-          </View>
+            </>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
 
       <SafeAreaView edges={['bottom']} style={styles.footer}>
-        <Button
-          title="Confirmar reporte"
-          variant="primary"
-          icon="arrow-forward"
-          iconPosition="right"
-          onPress={confirm}
-          loading={sending}
-          disabled={!type}
-        />
-        <Button title="Tomar otra fotografía" variant="outline" size="sm" icon="photo-camera" onPress={() => router.dismissTo('/report/camera')} disabled={sending} />
+        {detection ? (
+          <>
+            <Button
+              title="Confirmar reporte"
+              variant="primary"
+              icon="arrow-forward"
+              iconPosition="right"
+              onPress={confirm}
+              loading={sending}
+            />
+            <Button title="Tomar otra fotografía" variant="outline" size="sm" icon="photo-camera" onPress={() => router.dismissTo('/report/camera')} disabled={sending} />
+          </>
+        ) : (
+          <Button title="Tomar otra fotografía" variant="primary" icon="photo-camera" onPress={() => router.dismissTo('/report/camera')} />
+        )}
       </SafeAreaView>
     </SafeAreaView>
   );
@@ -350,7 +335,7 @@ const styles = StyleSheet.create({
   cardIcon: { width: 32, height: 32, borderRadius: 12, backgroundColor: 'rgba(0,87,192,0.1)', alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 22.5, color: colors.text },
   cardSubtitle: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
-  manualNotice: {
+  notice: {
     flexDirection: 'row',
     gap: 8,
     padding: 10,
@@ -359,7 +344,7 @@ const styles = StyleSheet.create({
     borderColor: colors.warningBorder,
     backgroundColor: colors.warningSurface,
   },
-  manualNoticeText: { flex: 1, fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.warningText },
+  noticeText: { flex: 1, fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.warningText },
   modelChip: { backgroundColor: colors.surfaceBlueSoft, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
   modelChipText: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.6, color: '#001A43' },
   tiles: { flexDirection: 'row', gap: 10 },
@@ -389,24 +374,6 @@ const styles = StyleSheet.create({
   },
   severityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.warning },
   severityText: { fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16, color: colors.warningText },
-  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  option: {
-    width: '48%',
-    flexGrow: 1,
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceMuted,
-  },
-  optionSelected: { backgroundColor: colors.navy, borderColor: colors.navy },
-  optionText: { flexShrink: 1, fontFamily: fonts.semibold, fontSize: 13, lineHeight: 17, color: colors.text },
-  optionTextFill: { flex: 1 },
-  optionTextSelected: { color: colors.white },
   confidence: {
     gap: 6,
     padding: 11,

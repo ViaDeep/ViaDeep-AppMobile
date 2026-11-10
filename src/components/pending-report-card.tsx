@@ -17,7 +17,7 @@ type Props = {
 /** Reporte guardado sin conexión, con la opción de enviarlo cuando vuelva el internet. */
 export function PendingReportCard({ report, onSend, onDiscard }: Props) {
   const [sending, setSending] = useState(false);
-  const type = report.detection?.type ?? report.manualType;
+  const type = report.detection?.type ?? null;
   const place = report.address ?? formatCoordinates(report.coordinates.latitude, report.coordinates.longitude);
 
   async function send() {

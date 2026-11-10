@@ -20,8 +20,8 @@ export interface InferenceEngine {
 }
 
 /**
- * Motor usado mientras el modelo .onnx no está integrado: no detecta nada, por lo que la app sigue
- * el flujo manual (el ciudadano elige el tipo de daño).
+ * Motor usado mientras el modelo .onnx no está integrado: no detecta nada, así que la app pide
+ * instalar la versión con el modelo antes de reportar.
  */
 export const pendingInferenceEngine: InferenceEngine = {
   available: false,
