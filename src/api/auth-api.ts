@@ -30,6 +30,7 @@ export const authApi = {
     }
   },
 
+  /** Crea la cuenta pendiente; el backend envía un código de 6 dígitos al correo. */
   async register(fullName: string, email: string, password: string): Promise<void> {
     try {
       await client.post('/auth/register', { fullName, email, password });
@@ -39,6 +40,42 @@ export const authApi = {
         throw new Error('Ya existe una cuenta con ese correo.');
       }
       throw apiError;
+    }
+  },
+
+  /** Confirma el correo con el código y devuelve el token de la sesión, como el login. */
+  async verifyEmail(email: string, code: string): Promise<string> {
+    try {
+      const { data } = await client.post<{ accessToken: string }>('/auth/email/verify', { email, code });
+      return data.accessToken;
+    } catch (error) {
+      // 422 trae "El código no es correcto", "El código venció..." o "Demasiados intentos...".
+      throw toApiError(error);
+    }
+  },
+
+  async resendVerification(email: string): Promise<void> {
+    try {
+      await client.post('/auth/email/resend', { email });
+    } catch (error) {
+      throw toApiError(error);
+    }
+  },
+
+  /** El backend responde igual exista o no la cuenta, para no revelar qué correos están registrados. */
+  async forgotPassword(email: string): Promise<void> {
+    try {
+      await client.post('/auth/password/forgot', { email });
+    } catch (error) {
+      throw toApiError(error);
+    }
+  },
+
+  async resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+    try {
+      await client.post('/auth/password/reset', { email, code, newPassword });
+    } catch (error) {
+      throw toApiError(error);
     }
   },
 
