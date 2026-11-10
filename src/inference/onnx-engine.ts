@@ -16,8 +16,8 @@ const MODEL = require('../../assets/models/lmd-yolo.onnx');
 type Ort = typeof import('onnxruntime-react-native');
 
 /**
- * ONNX Runtime es código nativo: existe en el APK de ViaDeep, pero no en Expo Go. Sin él, la app sigue en modo
- * manual en lugar de cerrarse al importar la librería.
+ * ONNX Runtime es código nativo: existe en el APK de ViaDeep, pero no en Expo Go. Sin él, la app avisa que falta el
+ * modelo en lugar de cerrarse al importar la librería.
  */
 export const onnxRuntimeInstalled = NativeModules.Onnxruntime != null;
 

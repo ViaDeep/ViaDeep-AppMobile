@@ -1,5 +1,4 @@
 import type { RegisterIncidentRequest } from '@/api/incident-api';
-import type { IncidentType } from '@/domain/incident';
 import type { Detection } from '@/inference/inference-engine';
 
 /** Mismo límite que la columna description del servicio de incidencias. */
@@ -10,9 +9,8 @@ export type Coordinates = { latitude: number; longitude: number };
 export type ReportDraft = {
   photoUri: string;
   coordinates: Coordinates;
+  /** Resultado de LMD-YOLO; el reporte solo se envía si supera el umbral de confianza. */
   detection: Detection | null;
-  /** Tipo elegido por el ciudadano; obligatorio cuando no hay detección válida. */
-  manualType: IncidentType | null;
   description: string;
 };
 
@@ -28,19 +26,19 @@ export function acceptedDetection(detection: Detection | null, threshold: number
 }
 
 /**
- * Explica al ciudadano por qué le toca elegir el tipo de daño: sin modelo en el celular, sin ninguna detección o
- * con una detección por debajo del umbral.
+ * Explica al ciudadano por qué no se puede enviar la foto: el tipo de daño lo reconoce siempre el modelo, así que
+ * sin modelo en el celular, sin ninguna detección o con una por debajo del umbral hay que tomar otra foto.
  */
-export function manualReason(modelAvailable: boolean, detection: Detection | null, threshold: number): string {
+export function noDetectionReason(modelAvailable: boolean, detection: Detection | null, threshold: number): string {
   const required = `${Math.round(threshold * 100)} %`;
   if (!modelAvailable) {
-    return 'Este celular no tiene el modelo de IA instalado, así que elige tú el tipo de daño.';
+    return 'Esta versión de la app no tiene el modelo de IA instalado. Instala la versión más reciente para reportar.';
   }
   if (!detection) {
-    return `La IA no reconoció ningún daño en la foto con al menos ${required} de seguridad. Elige tú el tipo de daño.`;
+    return `La IA no reconoció ningún daño en la foto con al menos ${required} de seguridad. Toma otra foto más cerca del daño y con buena luz.`;
   }
   const percent = `${(detection.confidence * 100).toFixed(0)} %`;
-  return `La IA solo tuvo ${percent} de seguridad y se necesita al menos ${required}. Elige tú el tipo de daño.`;
+  return `La IA solo tuvo ${percent} de seguridad y se necesita al menos ${required}. Toma otra foto más cerca del daño y con buena luz.`;
 }
 
 export function buildIncidentRequest(
@@ -56,14 +54,11 @@ export function buildIncidentRequest(
     longitude: draft.coordinates.longitude,
     ...(description ? { description } : {}),
   };
-  if (detection) {
-    const { type, ...aiResult } = detection;
-    return { ...base, type, aiValidated: true, aiResult };
+  if (!detection) {
+    throw new Error('La IA no reconoció ningún daño en la foto. Toma otra foto antes de enviar el reporte.');
   }
-  if (!draft.manualType) {
-    throw new Error('Elige el tipo de daño antes de enviar el reporte.');
-  }
-  return { ...base, type: draft.manualType, aiValidated: false };
+  const { type, ...aiResult } = detection;
+  return { ...base, type, aiValidated: true, aiResult };
 }
 
 /**

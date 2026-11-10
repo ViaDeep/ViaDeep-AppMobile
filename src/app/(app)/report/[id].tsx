@@ -157,12 +157,12 @@ export default function ReportDetailScreen() {
               {incident.aiValidated ? (
                 <View style={styles.inline}>
                   <Icon name="verified" size={14} color={colors.success} />
-                  <Text style={styles.validated}>Validado por NPU</Text>
+                  <Text style={styles.validated}>Validado por IA</Text>
                 </View>
               ) : (
                 <View style={styles.inline}>
                   <Icon name="touch-app" size={14} color={colors.textMuted} />
-                  <Text style={styles.manual}>Registro manual</Text>
+                  <Text style={styles.unvalidated}>Sin validación de IA</Text>
                 </View>
               )}
             </View>
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 2 },
   date: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
   validated: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.6, color: colors.success },
-  manual: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.6, color: colors.textMuted },
+  unvalidated: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.6, color: colors.textMuted },
   stateHeader: {
     flexDirection: 'row',
     alignItems: 'center',

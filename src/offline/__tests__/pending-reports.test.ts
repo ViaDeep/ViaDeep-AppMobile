@@ -19,8 +19,7 @@ function pending(localId: string, overrides: Partial<PendingReport> = {}): Pendi
     coordinates: { latitude: -12.05, longitude: -77.04 },
     address: 'Av. Arequipa 1200, Lince',
     capturedAt: '2026-10-15T10:00:00Z',
-    detection: null,
-    manualType: 'D40',
+    detection: { type: 'D40', confidence: 0.71, bboxX: 0.1, bboxY: 0.2, bboxWidth: 0.3, bboxHeight: 0.4 },
     description: 'Frente al paradero',
     savedAt: '2026-10-15T10:01:00Z',
     ...overrides,
@@ -55,8 +54,7 @@ describe('reportes pendientes de envío', () => {
     expect(toDraft(pending('a'))).toEqual({
       photoUri: 'file:///docs/pending-reports/a.jpg',
       coordinates: { latitude: -12.05, longitude: -77.04 },
-      detection: null,
-      manualType: 'D40',
+      detection: { type: 'D40', confidence: 0.71, bboxX: 0.1, bboxY: 0.2, bboxWidth: 0.3, bboxHeight: 0.4 },
       description: 'Frente al paradero',
     });
   });

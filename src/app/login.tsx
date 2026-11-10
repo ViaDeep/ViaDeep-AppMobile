@@ -1,15 +1,16 @@
-import { Link, Redirect } from 'expo-router';
+import { Link, Redirect, router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { authApi } from '@/api/auth-api';
+import { ApiError } from '@/api/http';
 import { colors, fonts } from '@/constants/theme';
 import { useSession } from '@/session/session-context';
 import { AuthBackdrop } from '@/ui/auth-backdrop';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
 import { comingSoon } from '@/ui/coming-soon';
-import { Icon } from '@/ui/icon';
 import { Logo } from '@/ui/logo';
 import { TextField } from '@/ui/text-field';
 
@@ -35,6 +36,12 @@ export default function LoginScreen() {
     try {
       await signIn(email, password);
     } catch (e) {
+      if (e instanceof ApiError && e.code === 'EMAIL_NOT_VERIFIED') {
+        // El código del registro pudo vencer: se envía otro (si se pidió hace menos de un minuto, sigue sirviendo).
+        await authApi.resendVerification(email.trim()).catch(() => undefined);
+        router.push({ pathname: '/verify-email', params: { email: email.trim() } });
+        return;
+      }
       setError(e instanceof Error ? e.message : 'No se pudo iniciar sesión.');
     } finally {
       setLoading(false);
@@ -48,10 +55,6 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.topRow}>
             <Chip label="Portal Ciudadano Oficial" dot={colors.successBright} border={colors.borderSoft} />
-            <View style={styles.place}>
-              <Icon name="location-on" size={13} color={colors.textSecondary} />
-              <Text style={styles.placeText}>Lima Metropolitana</Text>
-            </View>
           </View>
 
           <View style={styles.brand}>
@@ -85,7 +88,9 @@ export default function LoginScreen() {
               returnKeyType="go"
               onSubmitEditing={handleSubmit}
               labelAccessory={
-                <Pressable onPress={() => comingSoon('Recuperar contraseña')} hitSlop={8}>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/forgot-password', params: { email: email.trim() } })}
+                  hitSlop={8}>
                   <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
                 </Pressable>
               }
@@ -122,7 +127,7 @@ export default function LoginScreen() {
               Al continuar, aceptas los <Text style={styles.underline}>Términos y Condiciones</Text> y la{' '}
               <Text style={styles.underline}>Política de Privacidad</Text> de la Municipalidad de Lima.
             </Text>
-            <Chip label="ViaDeep v2.4 · Lima Metropolitana" dot={colors.primary} shape="tag" border="rgba(197,198,207,0.5)" style={styles.version} />
+            <Chip label="ViaDeep v2.4" dot={colors.primary} shape="tag" border="rgba(197,198,207,0.5)" style={styles.version} />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -135,8 +140,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 24 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16 },
-  place: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  placeText: { fontFamily: fonts.monoMedium, fontSize: 10, letterSpacing: 0.6, color: colors.textSecondary },
   brand: { paddingBottom: 24 },
   institution: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, color: colors.textSecondary, marginTop: 12, marginBottom: 12 },
   title: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 32, letterSpacing: -0.6, color: colors.text },

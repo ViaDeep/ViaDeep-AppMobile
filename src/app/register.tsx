@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { authApi } from '@/api/auth-api';
@@ -35,8 +35,8 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await authApi.register(fullName.trim(), email.trim(), password);
-      Alert.alert('Cuenta creada', 'Ya puedes iniciar sesión con tu correo y contraseña.');
-      router.back();
+      // La cuenta se activa al escribir el código que llega al correo: así sabemos que el correo es real y es suyo.
+      router.replace({ pathname: '/verify-email', params: { email: email.trim() } });
     } catch (e) {
       setErrors({ form: e instanceof Error ? e.message : 'No se pudo crear la cuenta.' });
     } finally {

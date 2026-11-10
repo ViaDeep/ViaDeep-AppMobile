@@ -9,6 +9,8 @@ type SessionState = {
   loading: boolean;
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
+  /** Abre la sesión con un token ya emitido (por ejemplo, al confirmar el correo con el código). */
+  signInWithToken: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
   /** Reemplaza los datos del usuario después de editar el perfil. */
   updateUser: (user: User) => void;
@@ -56,8 +58,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const token = await authApi.login(email.trim(), password);
+  const signInWithToken = useCallback(async (token: string) => {
     const me = await authApi.me(token);
     if (me.role !== 'CITIZEN') {
       throw new Error('La app es para ciudadanos. Los operadores usan la plataforma web.');
@@ -67,11 +68,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUser(me);
   }, []);
 
+  const signIn = useCallback(
+    async (email: string, password: string) => signInWithToken(await authApi.login(email.trim(), password)),
+    [signInWithToken],
+  );
+
   const updateUser = useCallback((next: User) => setUser(next), []);
 
   const value = useMemo(
-    () => ({ loading, user, signIn, signOut, updateUser }),
-    [loading, user, signIn, signOut, updateUser],
+    () => ({ loading, user, signIn, signInWithToken, signOut, updateUser }),
+    [loading, user, signIn, signInWithToken, signOut, updateUser],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

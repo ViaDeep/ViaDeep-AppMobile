@@ -3,20 +3,9 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts } from '@/constants/theme';
-import { inferenceEngine } from '@/inference/engine';
 
-import { Chip } from './chip';
 import { Icon } from './icon';
 import { LogoMark } from './logo';
-
-/** Chip que indica si el modelo de IA corre en el celular o si la app está en modo manual. */
-export function EngineChip() {
-  return inferenceEngine.available ? (
-    <Chip label="NPU ACTIVO" dot={colors.success} background={colors.surfaceBlue} border={colors.borderSoft} color={colors.navy} style={styles.centered} />
-  ) : (
-    <Chip label="MODO MANUAL" dot={colors.warning} background={colors.surfaceBlue} border={colors.borderSoft} color={colors.navy} style={styles.centered} />
-  );
-}
 
 /** Cabecera con la marca ViaDeep, usada en Mis reportes y Perfil. */
 export function BrandHeader({ section }: { section?: string }) {
@@ -32,7 +21,6 @@ export function BrandHeader({ section }: { section?: string }) {
           </>
         ) : null}
       </View>
-      <EngineChip />
     </View>
   );
 }
@@ -84,7 +72,6 @@ const styles = StyleSheet.create({
   },
   backBar: { paddingVertical: 8, gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  centered: { alignSelf: 'center' },
   flex: { flex: 1 },
   brand: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 24, letterSpacing: -0.45, color: colors.text },
   separator: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.borderSoft },

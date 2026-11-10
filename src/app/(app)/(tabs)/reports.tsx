@@ -4,6 +4,7 @@ import { Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PendingReportCard } from '@/components/pending-report-card';
+import { SortSheet, type ReportOrder } from '@/components/sort-sheet';
 import { placeLabel, ReportListCard } from '@/components/report-cards';
 import { colors, fonts } from '@/constants/theme';
 import { citizenStatus, reportCode, type CitizenStatus } from '@/domain/display';
@@ -31,7 +32,8 @@ export default function MyReportsScreen() {
   const [filter, setFilter] = useState<Filter>('ALL');
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
-  const [oldestFirst, setOldestFirst] = useState(false);
+  const [order, setOrder] = useState<ReportOrder>('NEWEST');
+  const [sorting, setSorting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -47,8 +49,8 @@ export default function MyReportsScreen() {
       const haystack = `${reportCode(incident.id, incident.createdAt)} ${TYPE_LABELS[incident.type]} ${placeLabel(incident)}`;
       return haystack.toLowerCase().includes(text);
     });
-    return oldestFirst ? [...items].reverse() : items;
-  }, [reports, filter, query, oldestFirst]);
+    return order === 'OLDEST' ? [...items].reverse() : items;
+  }, [reports, filter, query, order]);
 
   const active = reports.filter((incident) => !['RESOLVED', 'REJECTED'].includes(statusOf(incident))).length;
 
@@ -60,14 +62,6 @@ export default function MyReportsScreen() {
     } catch (e) {
       Alert.alert('No se pudo enviar', e instanceof Error ? e.message : 'Intenta de nuevo cuando tengas conexión.');
     }
-  }
-
-  function chooseOrder() {
-    Alert.alert('Ordenar reportes', undefined, [
-      { text: 'Más recientes primero', onPress: () => setOldestFirst(false) },
-      { text: 'Más antiguos primero', onPress: () => setOldestFirst(true) },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
   }
 
   return (
@@ -96,8 +90,12 @@ export default function MyReportsScreen() {
                   style={[styles.tool, searching && styles.toolActive]}>
                   <Icon name="search" size={16} color={searching ? colors.white : colors.textStrong} />
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel="Ordenar reportes" onPress={chooseOrder} style={styles.tool}>
-                  <Icon name="tune" size={16} color={colors.textStrong} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Ordenar reportes"
+                  onPress={() => setSorting(true)}
+                  style={[styles.tool, order === 'OLDEST' && styles.toolActive]}>
+                  <Icon name="sort" size={16} color={order === 'OLDEST' ? colors.white : colors.textStrong} />
                 </Pressable>
               </View>
             </View>
@@ -171,6 +169,7 @@ export default function MyReportsScreen() {
         }
         renderItem={({ item }) => <ReportListCard incident={item} onPress={() => router.push(`/report/${item.id}`)} />}
       />
+      <SortSheet visible={sorting} value={order} onChange={setOrder} onClose={() => setSorting(false)} />
     </SafeAreaView>
   );
 }

@@ -1,4 +1,3 @@
-import type { IncidentType } from '@/domain/incident';
 import type { Detection } from '@/inference/inference-engine';
 import type { Coordinates, ReportDraft } from '@/services/report-service';
 
@@ -13,7 +12,6 @@ export type PendingReport = {
   address: string | null;
   capturedAt: string;
   detection: Detection | null;
-  manualType: IncidentType | null;
   description: string;
   savedAt: string;
 };
@@ -29,7 +27,6 @@ export function toDraft(report: PendingReport): ReportDraft {
     photoUri: report.photoUri,
     coordinates: report.coordinates,
     detection: report.detection,
-    manualType: report.manualType,
     description: report.description,
   };
 }

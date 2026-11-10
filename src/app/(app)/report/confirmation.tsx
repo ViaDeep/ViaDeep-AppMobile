@@ -21,7 +21,7 @@ export default function ConfirmationScreen() {
     return <Redirect href="/" />;
   }
 
-  const type = acceptedDetection(flow.detection, env.aiConfidenceThreshold)?.type ?? flow.manualType;
+  const type = acceptedDetection(flow.detection, env.aiConfidenceThreshold)?.type ?? null;
   const place = capture.address ?? formatCoordinates(capture.coordinates.latitude, capture.coordinates.longitude);
 
   return (
