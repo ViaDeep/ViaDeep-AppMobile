@@ -44,6 +44,8 @@ export class ApiError extends Error {
     message: string,
     readonly status?: number,
     readonly network = false,
+    /** Código del backend para casos que la app trata aparte, por ejemplo EMAIL_NOT_VERIFIED. */
+    readonly code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -68,8 +70,15 @@ export function toApiError(error: unknown): ApiError {
       return new ApiError('No se pudo conectar con el servidor. Revisa tu conexión.', undefined, true);
     }
     const status = error.response.status;
-    const data = error.response.data as { detail?: string } | undefined;
-    return new ApiError(MESSAGES_BY_STATUS[status] ?? data?.detail ?? 'Ocurrió un error inesperado.', status);
+    const data = error.response.data as { detail?: string; code?: string } | undefined;
+    // Un error con código propio (o un 429 con la espera) trae su mensaje exacto en detail.
+    const specific = (data?.code || status === 429) && data?.detail ? data.detail : undefined;
+    return new ApiError(
+      specific ?? MESSAGES_BY_STATUS[status] ?? data?.detail ?? 'Ocurrió un error inesperado.',
+      status,
+      false,
+      data?.code,
+    );
   }
   return new ApiError('Ocurrió un error inesperado.');
 }
