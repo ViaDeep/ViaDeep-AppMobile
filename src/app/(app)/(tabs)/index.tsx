@@ -9,7 +9,6 @@ import { colors, fonts } from '@/constants/theme';
 import { useReports } from '@/reports/reports-context';
 import { useSession } from '@/session/session-context';
 import { Button } from '@/ui/button';
-import { Chip } from '@/ui/chip';
 import { Icon } from '@/ui/icon';
 import { Logo } from '@/ui/logo';
 
@@ -31,8 +30,6 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerBrand}>
           <Logo size="sm" />
-          <View style={styles.headerDivider} />
-          <Chip label="LIMA METRO" shape="tag" background={colors.surfaceBlueStrong} color={colors.primary} />
         </View>
         <Pressable
           accessibilityRole="button"
@@ -149,7 +146,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderFaint,
   },
   headerBrand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  headerDivider: { width: 1, height: 16, backgroundColor: colors.border },
   bell: { padding: 8 },
   bellDot: {
     position: 'absolute',
