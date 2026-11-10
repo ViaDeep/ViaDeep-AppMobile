@@ -42,6 +42,7 @@ export default function RootLayout() {
         <Stack.Screen name="register" />
         <Stack.Screen name="verify-email" />
         <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="oauth" options={{ animation: 'none' }} />
       </Stack>
     </SessionProvider>
   );
