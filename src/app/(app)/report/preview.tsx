@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhotoHud } from '@/components/photo-hud';
@@ -13,12 +13,9 @@ import { Chip } from '@/ui/chip';
 import { Icon } from '@/ui/icon';
 import { BackHeader } from '@/ui/top-bar';
 
-const CHECKS = ['Enfoque nítido', 'Luz adecuada'] as const;
-
 export default function PreviewScreen() {
   const flow = useReportFlow();
   const { capture } = flow;
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [analyzing, setAnalyzing] = useState(false);
 
   if (!capture) {
@@ -30,7 +27,7 @@ export default function PreviewScreen() {
     setAnalyzing(true);
     try {
       const detection = inferenceEngine.available ? await inferenceEngine.detect(capture.photoUri).catch(() => null) : null;
-      flow.update({ detection, manualType: null });
+      flow.update({ detection });
       router.push('/report/result');
     } finally {
       setAnalyzing(false);
@@ -68,22 +65,6 @@ export default function PreviewScreen() {
                   Asegúrate de que el bache o falla en la pista sea reconocible y no esté borroso antes de enviar tu reporte municipal.
                 </Text>
               </View>
-            </View>
-            <View style={styles.checks}>
-              {CHECKS.map((label) => {
-                const on = checked[label] ?? false;
-                return (
-                  <Pressable
-                    key={label}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: on }}
-                    onPress={() => setChecked((current) => ({ ...current, [label]: !on }))}
-                    style={styles.check}>
-                    <Icon name={on ? 'check-circle' : 'radio-button-unchecked'} size={15} color={on ? colors.success : colors.textMuted} />
-                    <Text style={styles.checkText}>{label}</Text>
-                  </Pressable>
-                );
-              })}
             </View>
           </View>
         </View>
@@ -138,9 +119,6 @@ const styles = StyleSheet.create({
   cardText: { flex: 1, gap: 4 },
   cardTitle: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 20, color: colors.text },
   cardBody: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 18, color: colors.textSecondary },
-  checks: { flexDirection: 'row', gap: 8, paddingTop: 13, borderTopWidth: 1, borderTopColor: colors.surfaceBlue },
-  check: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  checkText: { fontFamily: fonts.monoMedium, fontSize: 10, lineHeight: 14, letterSpacing: 0.6, color: colors.textSecondary },
   footer: { gap: 12, paddingTop: 8 },
   actions: { flexDirection: 'row', gap: 12 },
   action: { flex: 1, borderRadius: 4 },
