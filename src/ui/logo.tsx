@@ -16,20 +16,17 @@ export function LogoMark({ size = 36 }: { size?: number }) {
   );
 }
 
-type LogoProps = { size?: 'sm' | 'md'; tagline?: boolean };
+type LogoProps = { size?: 'sm' | 'md' };
 
-/** Logotipo completo: isotipo, nombre y lema. */
-export function Logo({ size = 'md', tagline = true }: LogoProps) {
+/** Logotipo completo: isotipo y nombre. */
+export function Logo({ size = 'md' }: LogoProps) {
   const small = size === 'sm';
   return (
     <View style={styles.row}>
       <LogoMark size={small ? 24 : 36} />
-      <View>
-        <Text style={[styles.name, small && styles.nameSmall]}>
-          Via<Text style={styles.accent}>Deep</Text>
-        </Text>
-        {tagline && <Text style={[styles.tagline, small && styles.taglineSmall]}>ON-DEVICE SMART ROAD AI</Text>}
-      </View>
+      <Text style={[styles.name, small && styles.nameSmall]}>
+        Via<Text style={styles.accent}>Deep</Text>
+      </Text>
     </View>
   );
 }
@@ -39,6 +36,4 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 20, color: colors.navy, letterSpacing: -0.4 },
   nameSmall: { fontSize: 12, lineHeight: 14 },
   accent: { color: colors.primaryBright },
-  tagline: { fontFamily: fonts.bold, fontSize: 7, letterSpacing: 0.6, color: colors.textMuted },
-  taglineSmall: { fontSize: 5 },
 });
