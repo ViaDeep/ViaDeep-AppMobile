@@ -1,8 +1,10 @@
-import { Link, Redirect } from 'expo-router';
+import { Link, Redirect, router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { authApi } from '@/api/auth-api';
+import { ApiError } from '@/api/http';
 import { colors, fonts } from '@/constants/theme';
 import { useSession } from '@/session/session-context';
 import { AuthBackdrop } from '@/ui/auth-backdrop';
@@ -34,6 +36,12 @@ export default function LoginScreen() {
     try {
       await signIn(email, password);
     } catch (e) {
+      if (e instanceof ApiError && e.code === 'EMAIL_NOT_VERIFIED') {
+        // El código del registro pudo vencer: se envía otro (si se pidió hace menos de un minuto, sigue sirviendo).
+        await authApi.resendVerification(email.trim()).catch(() => undefined);
+        router.push({ pathname: '/verify-email', params: { email: email.trim() } });
+        return;
+      }
       setError(e instanceof Error ? e.message : 'No se pudo iniciar sesión.');
     } finally {
       setLoading(false);
@@ -80,7 +88,9 @@ export default function LoginScreen() {
               returnKeyType="go"
               onSubmitEditing={handleSubmit}
               labelAccessory={
-                <Pressable onPress={() => comingSoon('Recuperar contraseña')} hitSlop={8}>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/forgot-password', params: { email: email.trim() } })}
+                  hitSlop={8}>
                   <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
                 </Pressable>
               }
