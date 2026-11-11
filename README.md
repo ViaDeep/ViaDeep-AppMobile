@@ -100,6 +100,20 @@ Al terminar, EAS muestra un enlace y un QR para descargar el APK en el celular. 
 arranca `npm start` y abre la app ViaDeep (no Expo Go): se conecta a la PC igual que antes. Solo hay que
 volver a armar el APK si se agrega otra librería nativa o se cambia el modelo.
 
+## APK de la demo (servidor en la nube)
+
+El perfil `preview` arma un APK independiente, que no necesita la PC: trae el código y el modelo adentro y se
+conecta al servidor de la demo por https. La dirección del servidor se guarda una sola vez en EAS (no en el
+repositorio):
+
+```bash
+eas env:create --environment preview --name EXPO_PUBLIC_API_URL --value https://DOMINIO --visibility plaintext
+eas build --profile preview --platform android
+```
+
+EAS entrega un enlace para descargar el APK; ese enlace se puede compartir con quien vaya a probar la app.
+Hay que volver a armarlo cuando cambie el código de la app o el modelo.
+
 ## Comandos
 
 ```bash
