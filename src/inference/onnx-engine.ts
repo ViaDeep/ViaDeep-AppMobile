@@ -7,7 +7,7 @@ import UPNG from 'upng-js';
 import ImageTensor from '../../modules/image-tensor';
 
 import type { Detection, InferenceEngine } from './inference-engine';
-import { bestDetection } from './postprocessing';
+import { detectAll } from './postprocessing';
 import { letterbox, MODEL_INPUT_SIZE, toInputTensor, type Letterbox } from './preprocessing';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -108,7 +108,7 @@ export type StageTimes = { pixels: number; tensor: number; inference: number; po
 /** Ejecuta el mismo camino que `detect` sobre una foto y cronometra cada etapa. */
 export async function timedDetect(
   imageUri: string,
-): Promise<{ detection: Detection | null; times: StageTimes; native: NativeTimes | null }> {
+): Promise<{ detections: Detection[]; times: StageTimes; native: NativeTimes | null }> {
   const model = await loadSession();
   if (!ort) throw new Error('ONNX Runtime no está disponible');
   const t0 = performance.now();
@@ -118,10 +118,10 @@ export async function timedDetect(
   const t2 = performance.now();
   const result = await model.run({ [model.inputNames[0]]: input });
   const t3 = performance.now();
-  const detection = bestDetection(result[model.outputNames[0]].data as Float32Array, box);
+  const detections = detectAll(result[model.outputNames[0]].data as Float32Array, box);
   const t4 = performance.now();
   return {
-    detection,
+    detections,
     times: { pixels: t1 - t0, tensor: t2 - t1, inference: t3 - t2, postprocess: t4 - t3, total: t4 - t0 },
     native,
   };
@@ -137,12 +137,12 @@ export async function sessionLoadTime(): Promise<number> {
 /** LMD-YOLO en el celular con ONNX Runtime (CPU). */
 export const onnxInferenceEngine: InferenceEngine = {
   available: true,
-  async detect(imageUri: string): Promise<Detection | null> {
+  async detect(imageUri: string): Promise<Detection[]> {
     const [model, { box, tensor }] = await Promise.all([loadSession(), readPixels(imageUri)]);
     if (!ort) throw new Error('ONNX Runtime no está disponible');
     const input: Tensor = new ort.Tensor('float32', tensor(), [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
     const result = await model.run({ [model.inputNames[0]]: input });
     const output = result[model.outputNames[0]];
-    return bestDetection(output.data as Float32Array, box);
+    return detectAll(output.data as Float32Array, box);
   },
 };

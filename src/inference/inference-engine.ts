@@ -1,6 +1,6 @@
 import type { IncidentType } from '@/domain/incident';
 
-/** Detección con mayor confianza devuelta por el modelo, con la caja normalizada a [0, 1]. */
+/** Un daño que el modelo reconoció en la foto, con la caja normalizada a [0, 1]. */
 export type Detection = {
   type: IncidentType;
   confidence: number;
@@ -16,7 +16,8 @@ export type Detection = {
  */
 export interface InferenceEngine {
   readonly available: boolean;
-  detect(imageUri: string): Promise<Detection | null>;
+  /** Todas las detecciones de la foto (después de NMS), de mayor a menor confianza. */
+  detect(imageUri: string): Promise<Detection[]>;
 }
 
 /**
@@ -26,6 +27,6 @@ export interface InferenceEngine {
 export const pendingInferenceEngine: InferenceEngine = {
   available: false,
   async detect() {
-    return null;
+    return [];
   },
 };
