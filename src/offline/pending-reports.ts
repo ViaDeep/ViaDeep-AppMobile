@@ -11,10 +11,18 @@ export type PendingReport = {
   coordinates: Coordinates;
   address: string | null;
   capturedAt: string;
-  detection: Detection | null;
+  detections: Detection[];
   description: string;
   savedAt: string;
 };
+
+/** Las versiones anteriores de la app guardaban solo la detección principal en `detection`. */
+type StoredPendingReport = Omit<PendingReport, 'detections'> & { detections?: Detection[]; detection?: Detection | null };
+
+function upgrade(item: StoredPendingReport): PendingReport {
+  const { detection, detections, ...rest } = item;
+  return { ...rest, detections: detections ?? (detection ? [detection] : []) };
+}
 
 /** Dónde se guarda la lista (un archivo en el celular; en las pruebas, memoria). */
 export type PendingStorage = {
@@ -26,7 +34,7 @@ export function toDraft(report: PendingReport): ReportDraft {
   return {
     photoUri: report.photoUri,
     coordinates: report.coordinates,
-    detection: report.detection,
+    detections: report.detections,
     description: report.description,
   };
 }
@@ -36,7 +44,9 @@ export function parsePending(raw: string | null): PendingReport[] {
   if (!raw) return [];
   try {
     const value: unknown = JSON.parse(raw);
-    return Array.isArray(value) ? (value as PendingReport[]).filter((item) => typeof item?.localId === 'string') : [];
+    return Array.isArray(value)
+      ? (value as StoredPendingReport[]).filter((item) => typeof item?.localId === 'string').map(upgrade)
+      : [];
   } catch {
     return [];
   }

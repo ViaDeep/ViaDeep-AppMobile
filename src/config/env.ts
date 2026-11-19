@@ -28,8 +28,8 @@ export const env = {
     process.env.EXPO_PUBLIC_NOTIFICATIONS_URL,
     apiUrl || incidentsUrl.replace(/:8082$/, ':8084'),
   ),
-  /** Confianza mínima de LMD-YOLO para registrar el reporte como validado por IA (RF de OB2). */
-  aiConfidenceThreshold: Number(process.env.EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD ?? '0.5'),
+  /** Confianza mínima de LMD-YOLO para aceptar un daño detectado (70 %). */
+  aiConfidenceThreshold: Number(process.env.EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD ?? '0.7'),
   /** Correo de la mesa de ayuda que se muestra en "Ayuda y soporte". Si está vacío no se muestra. */
   supportEmail: (process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? '').trim(),
 } as const;

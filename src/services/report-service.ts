@@ -1,5 +1,6 @@
 import type { RegisterIncidentRequest } from '@/api/incident-api';
 import type { Detection } from '@/inference/inference-engine';
+import { MAX_DETECTIONS } from '@/inference/postprocessing';
 
 /** Mismo límite que la columna description del servicio de incidencias. */
 export const DESCRIPTION_MAX_LENGTH = 500;
@@ -9,8 +10,8 @@ export type Coordinates = { latitude: number; longitude: number };
 export type ReportDraft = {
   photoUri: string;
   coordinates: Coordinates;
-  /** Resultado de LMD-YOLO; el reporte solo se envía si supera el umbral de confianza. */
-  detection: Detection | null;
+  /** Todas las detecciones de LMD-YOLO; el reporte solo se envía si al menos una supera el umbral. */
+  detections: Detection[];
   description: string;
 };
 
@@ -20,25 +21,38 @@ export type ReportDependencies = {
   confidenceThreshold: number;
 };
 
-/** Una detección solo cuenta como validación por IA si supera el umbral de confianza. */
-export function acceptedDetection(detection: Detection | null, threshold: number): Detection | null {
-  return detection && detection.confidence >= threshold ? detection : null;
+/**
+ * Separa las detecciones en las que superan el umbral (los daños del reporte) y las que el modelo reconoció con menos
+ * confianza, ambas de mayor a menor confianza.
+ */
+export function splitDetections(detections: Detection[], threshold: number): { accepted: Detection[]; below: Detection[] } {
+  const sorted = [...detections].sort((a, b) => b.confidence - a.confidence);
+  return {
+    accepted: sorted.filter((d) => d.confidence >= threshold),
+    below: sorted.filter((d) => d.confidence < threshold),
+  };
+}
+
+/** La detección principal del reporte: la de mayor confianza entre las que superan el umbral. */
+export function mainDetection(detections: Detection[], threshold: number): Detection | null {
+  return splitDetections(detections, threshold).accepted[0] ?? null;
 }
 
 /**
  * Explica al ciudadano por qué no se puede enviar la foto: el tipo de daño lo reconoce siempre el modelo, así que
- * sin modelo en el celular, sin ninguna detección o con una por debajo del umbral hay que tomar otra foto.
+ * sin modelo en el celular, sin ninguna detección o con todas por debajo del umbral hay que tomar otra foto.
  */
-export function noDetectionReason(modelAvailable: boolean, detection: Detection | null, threshold: number): string {
+export function noDetectionReason(modelAvailable: boolean, detections: Detection[], threshold: number): string {
   const required = `${Math.round(threshold * 100)} %`;
   if (!modelAvailable) {
     return 'Esta versión de la app no tiene el modelo de IA instalado. Instala la versión más reciente para reportar.';
   }
-  if (!detection) {
-    return `La IA no reconoció ningún daño en la foto con al menos ${required} de seguridad. Toma otra foto más cerca del daño y con buena luz.`;
+  const best = splitDetections(detections, threshold).below[0];
+  if (!best) {
+    return `La IA no reconoció ningún daño en la foto. Toma otra foto más cerca del daño y con buena luz.`;
   }
-  const percent = `${(detection.confidence * 100).toFixed(0)} %`;
-  return `La IA solo tuvo ${percent} de seguridad y se necesita al menos ${required}. Toma otra foto más cerca del daño y con buena luz.`;
+  const percent = `${(best.confidence * 100).toFixed(0)} %`;
+  return `La IA reconoció posibles daños, pero el más seguro tuvo ${percent} y se necesita al menos ${required}. Toma otra foto más cerca del daño y con buena luz.`;
 }
 
 export function buildIncidentRequest(
@@ -46,19 +60,26 @@ export function buildIncidentRequest(
   evidenceId: string,
   threshold: number,
 ): RegisterIncidentRequest {
-  const detection = acceptedDetection(draft.detection, threshold);
+  const { accepted, below } = splitDetections(draft.detections, threshold);
+  const main = accepted[0];
+  if (!main) {
+    throw new Error('La IA no reconoció ningún daño en la foto. Toma otra foto antes de enviar el reporte.');
+  }
   const description = draft.description.trim();
-  const base = {
+  const { type, ...aiResult } = main;
+  return {
     evidenceId,
     latitude: draft.coordinates.latitude,
     longitude: draft.coordinates.longitude,
     ...(description ? { description } : {}),
+    type,
+    aiValidated: true,
+    aiResult,
+    detections: [
+      ...accepted.map((d) => ({ ...d, accepted: true })),
+      ...below.map((d) => ({ ...d, accepted: false })),
+    ].slice(0, MAX_DETECTIONS),
   };
-  if (!detection) {
-    throw new Error('La IA no reconoció ningún daño en la foto. Toma otra foto antes de enviar el reporte.');
-  }
-  const { type, ...aiResult } = detection;
-  return { ...base, type, aiValidated: true, aiResult };
 }
 
 /**

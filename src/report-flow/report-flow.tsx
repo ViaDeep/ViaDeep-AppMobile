@@ -15,14 +15,15 @@ export type Capture = {
 /** Datos que se van llenando a lo largo de los 4 pasos del reporte. */
 export type ReportFlowState = {
   capture: Capture | null;
-  detection: Detection | null;
+  /** Todas las detecciones de LMD-YOLO en la foto, de mayor a menor confianza. */
+  detections: Detection[];
   /** Comentario opcional del ciudadano sobre la incidencia. */
   description: string;
   /** Resultado del envío, para la pantalla de confirmación. */
   submitted: { id: string; createdAt: string } | null;
 };
 
-const EMPTY: ReportFlowState = { capture: null, detection: null, description: '', submitted: null };
+const EMPTY: ReportFlowState = { capture: null, detections: [], description: '', submitted: null };
 
 type ReportFlow = ReportFlowState & {
   update: (changes: Partial<ReportFlowState>) => void;
