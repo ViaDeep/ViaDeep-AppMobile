@@ -16,14 +16,18 @@ El diseño sigue los mockups de Figma del proyecto (colores, tipografías Inter 
 - Notificaciones armadas a partir del historial de cada reporte (el backend aún no tiene servicio de avisos).
 
 La detección corre en el celular con LMD-YOLO (`assets/models/lmd-yolo.onnx`) y ONNX Runtime en CPU:
-la foto se encaja en 640 × 640 con el letterbox canónico de LMD-YOLO y de la salida `[1, 8, 8400]` se toma la
-caja de mayor confianza (`src/inference/postprocessing.ts`). La foto se prepara en Kotlin
+la foto se encaja en 640 × 640 con el letterbox canónico de LMD-YOLO y de la salida `[1, 8, 8400]` se toman
+todas las cajas con al menos 25 % de confianza, con supresión de no máximos (NMS) por clase e IoU 0,7, igual que
+Ultralytics (`src/inference/postprocessing.ts`). La foto se prepara en Kotlin
 (`modules/image-tensor/`): decodifica el JPEG, aplica la orientación EXIF y arma el tensor con las mismas
 ecuaciones que `docs/canonical_mobile_preprocessing.md` del repositorio LMD-YOLO. Da el mismo tensor bit a bit
 que `scripts/generate_canonical_mobile_golden.py`. En un APK anterior a ese módulo, la app vuelve al camino
 en JavaScript (`src/inference/preprocessing.ts`), que es más lento. El tipo de
-daño lo reconoce siempre el modelo: si la confianza es menor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD` (0.5 por
-defecto), la app pide tomar otra foto y no deja enviar el reporte. ONNX Runtime es código nativo, así que en Expo
+daño lo reconoce siempre el modelo. Los daños con confianza igual o mayor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD`
+(0.7 por defecto) son los del reporte: se muestran todos, cada uno con su caja y su porcentaje, y el de mayor
+confianza es el tipo principal. Los que no llegan al umbral se muestran aparte, con borde punteado y su porcentaje,
+y se envían solo como referencia. Si ninguno llega al umbral, la app pide tomar otra foto y no deja enviar el
+reporte. ONNX Runtime es código nativo, así que en Expo
 Go no se puede reportar; para usar el modelo se instala el APK de desarrollo (ver más abajo). La foto se puede
 tomar con la cámara o elegir de la galería.
 
