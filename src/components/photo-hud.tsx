@@ -6,7 +6,11 @@ import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { colors, fonts } from '@/constants/theme';
 import { Icon } from '@/ui/icon';
 
-export type HudBox = { x: number; y: number; width: number; height: number; label: string };
+/** muted: detección por debajo del umbral, dibujada con borde punteado y color de aviso. */
+export type HudBox = { x: number; y: number; width: number; height: number; label: string; muted?: boolean };
+
+/** Alto de la etiqueta de una caja; si no entra encima de la caja, va adentro. */
+const LABEL_HEIGHT = 24;
 
 type Props = {
   uri: string | null;
@@ -18,11 +22,13 @@ type Props = {
   time?: string;
   /** Caja de la detección con coordenadas normalizadas a [0, 1] respecto a la foto original. */
   box?: HudBox | null;
+  /** Varias cajas (todas las detecciones de la foto); si se pasa, reemplaza a `box`. */
+  boxes?: HudBox[];
   children?: ReactNode;
 };
 
 /** Foto con los datos superpuestos (ubicación, hora y caja de detección), como en los mockups. */
-export function PhotoHud({ uri, height, badge, address, coordinates, time, box, children }: Props) {
+export function PhotoHud({ uri, height, badge, address, coordinates, time, box, boxes, children }: Props) {
   const [frame, setFrame] = useState<{ width: number; height: number } | null>(null);
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
 
@@ -31,7 +37,7 @@ export function PhotoHud({ uri, height, badge, address, coordinates, time, box, 
     setFrame({ width, height: layoutHeight });
   }
 
-  const boxStyle = box && frame && natural ? coverBox(box, frame, natural) : null;
+  const shown = boxes ?? (box ? [box] : []);
 
   return (
     <View style={[styles.frame, { height }]} onLayout={onLayout}>
@@ -49,20 +55,33 @@ export function PhotoHud({ uri, height, badge, address, coordinates, time, box, 
         </View>
       )}
 
-      {box && boxStyle ? (
-        <View style={[styles.box, boxStyle]}>
-          <View style={[styles.reticle, styles.reticleTL]} />
-          <View style={[styles.reticle, styles.reticleTR]} />
-          <View style={[styles.reticle, styles.reticleBL]} />
-          <View style={[styles.reticle, styles.reticleBR]} />
-          <View style={styles.boxLabel}>
-            <View style={styles.boxDot} />
-            <Text style={styles.boxLabelText} numberOfLines={1}>
-              {box.label}
-            </Text>
-          </View>
-        </View>
-      ) : null}
+      {frame && natural
+        ? // Las cajas de menor confianza primero, para que las aceptadas queden encima.
+          [...shown.map((item, index) => ({ item, index }))]
+            .sort((a, b) => Number(Boolean(b.item.muted)) - Number(Boolean(a.item.muted)))
+            .map(({ item, index }) => {
+              const boxStyle = coverBox(item, frame, natural);
+              const labelInside = boxStyle.top < LABEL_HEIGHT;
+              return (
+                <View key={index} style={[styles.box, item.muted && styles.boxMuted, boxStyle]}>
+                  {item.muted ? null : (
+                    <>
+                      <View style={[styles.reticle, styles.reticleTL]} />
+                      <View style={[styles.reticle, styles.reticleTR]} />
+                      <View style={[styles.reticle, styles.reticleBL]} />
+                      <View style={[styles.reticle, styles.reticleBR]} />
+                    </>
+                  )}
+                  <View style={[styles.boxLabel, labelInside && styles.boxLabelInside, item.muted && styles.boxLabelMuted]}>
+                    <View style={[styles.boxDot, item.muted && styles.boxDotMuted]} />
+                    <Text style={styles.boxLabelText} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })
+        : null}
 
       {badge ? (
         <View style={styles.badge}>
@@ -127,6 +146,7 @@ const styles = StyleSheet.create({
   placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
   placeholderText: { fontFamily: fonts.medium, fontSize: 12, color: colors.textMuted },
   box: { position: 'absolute', borderWidth: 2, borderColor: colors.primary, borderRadius: 4, backgroundColor: 'rgba(0,87,192,0.08)' },
+  boxMuted: { borderStyle: 'dashed', borderColor: colors.warning, backgroundColor: 'rgba(242,183,5,0.06)' },
   reticle: { position: 'absolute', width: 10, height: 10, borderColor: colors.white },
   reticleTL: { left: -4, top: -4, borderLeftWidth: 2, borderTopWidth: 2 },
   reticleTR: { right: -4, top: -4, borderRightWidth: 2, borderTopWidth: 2 },
@@ -146,6 +166,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
     backgroundColor: colors.navy,
   },
+  boxLabelInside: { top: 2, left: 2 },
+  boxLabelMuted: { backgroundColor: 'rgba(15,32,66,0.75)', borderColor: colors.warning },
+  boxDotMuted: { backgroundColor: colors.warning },
   boxDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.successSoft },
   boxLabelText: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.6, color: colors.white },
   badge: {

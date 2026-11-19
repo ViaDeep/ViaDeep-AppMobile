@@ -85,7 +85,8 @@ export default function BenchmarkScreen() {
       const nativeSamples: NativeTimes[] = [];
       for (let i = 0; i < RUNS; i++) {
         setProgress(`Midiendo ${i + 1}/${RUNS}`);
-        const { detection: found, times, native } = await timedDetect(source.uri);
+        const { detections, times, native } = await timedDetect(source.uri);
+        const found = detections[0];
         samples.push(times);
         if (native) nativeSamples.push(native);
         if (found) detection = `${found.type} ${(found.confidence * 100).toFixed(1)} %`;

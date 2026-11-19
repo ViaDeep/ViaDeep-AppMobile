@@ -6,10 +6,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { env } from '@/config/env';
 import { colors, fonts } from '@/constants/theme';
 import { formatCoordinates, formatDateTime, reportCode } from '@/domain/display';
-import { TYPE_LABELS } from '@/domain/incident';
+import { typeListLabel } from '@/domain/incident';
 import { TYPE_ICONS } from '@/domain/type-icons';
 import { useReportFlow } from '@/report-flow/report-flow';
-import { acceptedDetection } from '@/services/report-service';
+import { splitDetections } from '@/services/report-service';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
 import { Icon, type IconName } from '@/ui/icon';
@@ -21,7 +21,8 @@ export default function ConfirmationScreen() {
     return <Redirect href="/" />;
   }
 
-  const type = acceptedDetection(flow.detection, env.aiConfidenceThreshold)?.type ?? null;
+  const accepted = splitDetections(flow.detections, env.aiConfidenceThreshold).accepted;
+  const type = accepted[0]?.type ?? null;
   const place = capture.address ?? formatCoordinates(capture.coordinates.latitude, capture.coordinates.longitude);
 
   return (
@@ -56,7 +57,7 @@ export default function ConfirmationScreen() {
             </View>
           </View>
           <View style={styles.rowBetween}>
-            <InfoRow icon={type ? TYPE_ICONS[type] : 'report-problem'} label="Tipo de daño" value={type ? TYPE_LABELS[type] : '—'} />
+            <InfoRow icon={type ? TYPE_ICONS[type] : 'report-problem'} label={accepted.length > 1 ? 'Tipos de daño' : 'Tipo de daño'} value={type ? typeListLabel(accepted.map((d) => d.type)) : '—'} />
             <View style={styles.statusPill}>
               <View style={styles.statusDot} />
               <Text style={styles.statusText}>Registrada</Text>
