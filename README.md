@@ -36,9 +36,10 @@ y "Prueba de uso continuo", que detecta una foto tras otra durante 15 o 30 minut
 de la app, la temperatura de la batería y el estado térmico. Guarda el avance cada minuto en el celular, así que
 si la app se cierra a mitad de la prueba se ve cuándo pasó.
 
-El modelo actual es el de la etapa 10, época 50 (`last.pt`): la etapa 9 ajustada 50 épocas más con fotos de calles de
-Lima tomadas con celular, mezcladas con parte de RDD2022 para no olvidarlo (mAP@50 de validación 0,624 en Lima,
-0,743 en China y 0,443 en los otros países; con la etapa 9 era 0,374 en Lima). Viene del repositorio
+El modelo actual es el promedio 50/50 de los pesos de la etapa 10 y la etapa 11 (las dos en la época 50, ajustes
+de la etapa 9 con fotos de calles de Lima tomadas con celular, mezcladas con parte de RDD2022 para no olvidarlo).
+Ese promedio tiene mAP@50 de validación 0,568 en Lima (18 fotos), 0,747 en China y 0,441 en los otros países;
+la etapa 10 sola tenía 0,552 en esas mismas fotos de Lima. Viene del repositorio
 [ViaDeep/LMD-YOLO](https://github.com/ViaDeep/LMD-YOLO), reparametrizado (DBB en modo deploy) y exportado
 a ONNX FP32 640 sin NMS. Para cambiarlo por otro entrenamiento basta con reemplazar el archivo, siempre
 que mantenga la entrada `[1, 3, 640, 640]`, la salida `[1, 8, 8400]` y las clases D00, D10, D20 y D40.
