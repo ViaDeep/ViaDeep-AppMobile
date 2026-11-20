@@ -28,6 +28,9 @@ object CanonicalLetterbox {
   const val SIZE = 640
   const val PADDING_VALUE = 114
 
+  /** v / 255 para cada valor de 0 a 255, igual que dividir en cada píxel. */
+  private val UNIT = FloatArray(256) { it / 255.0f }
+
   /** Dimensiones de la foto ya orientada: las orientaciones EXIF 5 a 8 giran 90° e intercambian ancho y alto. */
   fun orientedSize(width: Int, height: Int, orientation: Int): Pair<Int, Int> =
     if (orientation in 5..8) Pair(height, width) else Pair(width, height)
@@ -43,44 +46,52 @@ object CanonicalLetterbox {
     val geometry = geometry(orientedWidth, orientedHeight)
 
     val plane = SIZE * SIZE
-    val bytes = ByteArray(3 * plane * 4)
-    val tensor = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
-    val pad = PADDING_VALUE / 255.0f
-    for (i in 0 until 3 * plane) tensor.put(i, pad)
+    // Se calcula en un FloatArray y se copia al final de una vez: escribir valor por valor en un FloatBuffer es
+    // muy lento cuando ART no compila el método (APK de desarrollo, recién instalado).
+    val values = FloatArray(3 * plane)
+    java.util.Arrays.fill(values, PADDING_VALUE / 255.0f)
 
     val xMap = axisMap(orientedWidth, geometry.resizedWidth)
     val yMap = axisMap(orientedHeight, geometry.resizedHeight)
-    val denominator = xMap[0].denominator * yMap[0].denominator
+    // Todo cabe en Int: cada peso es como máximo 2 × 640 y el numerador como máximo 255 × (2 × 640)².
+    val denominator = (xMap[0].denominator * yMap[0].denominator).toInt()
+    val half = denominator / 2
     val xLow = IntArray(xMap.size) { xMap[it].low * walk.dx }
     val xHigh = IntArray(xMap.size) { xMap[it].high * walk.dx }
+    val xWeightLow = IntArray(xMap.size) { xMap[it].weightLow.toInt() }
+    val xWeightHigh = IntArray(xMap.size) { xMap[it].weightHigh.toInt() }
+    val green = plane
+    val blue = 2 * plane
     for (y in 0 until geometry.resizedHeight) {
       val ym = yMap[y]
       val rowLow = walk.base + ym.low * walk.dy
       val rowHigh = walk.base + ym.high * walk.dy
+      val yWeightLow = ym.weightLow.toInt()
+      val yWeightHigh = ym.weightHigh.toInt()
       val targetRow = (y + geometry.padTop) * SIZE + geometry.padLeft
       for (x in 0 until geometry.resizedWidth) {
-        val xm = xMap[x]
         val p00 = pixels[rowLow + xLow[x]]
         val p01 = pixels[rowLow + xHigh[x]]
         val p10 = pixels[rowHigh + xLow[x]]
         val p11 = pixels[rowHigh + xHigh[x]]
-        val w00 = xm.weightLow * ym.weightLow
-        val w01 = xm.weightHigh * ym.weightLow
-        val w10 = xm.weightLow * ym.weightHigh
-        val w11 = xm.weightHigh * ym.weightHigh
+        val w00 = xWeightLow[x] * yWeightLow
+        val w01 = xWeightHigh[x] * yWeightLow
+        val w10 = xWeightLow[x] * yWeightHigh
+        val w11 = xWeightHigh[x] * yWeightHigh
         val target = targetRow + x
-        for (channel in 0..2) {
-          val shift = 16 - 8 * channel
-          val numerator =
-            ((p00 ushr shift) and 0xff).toLong() * w00 +
-              ((p01 ushr shift) and 0xff).toLong() * w01 +
-              ((p10 ushr shift) and 0xff).toLong() * w10 +
-              ((p11 ushr shift) and 0xff).toLong() * w11
-          val value = ((numerator + denominator / 2L) / denominator).toInt()
-          tensor.put(channel * plane + target, value / 255.0f)
-        }
+        val r = (((p00 ushr 16) and 0xff) * w00 + ((p01 ushr 16) and 0xff) * w01 +
+          ((p10 ushr 16) and 0xff) * w10 + ((p11 ushr 16) and 0xff) * w11 + half) / denominator
+        val g = (((p00 ushr 8) and 0xff) * w00 + ((p01 ushr 8) and 0xff) * w01 +
+          ((p10 ushr 8) and 0xff) * w10 + ((p11 ushr 8) and 0xff) * w11 + half) / denominator
+        val b = ((p00 and 0xff) * w00 + (p01 and 0xff) * w01 + (p10 and 0xff) * w10 + (p11 and 0xff) * w11 + half) /
+          denominator
+        values[target] = UNIT[r]
+        values[green + target] = UNIT[g]
+        values[blue + target] = UNIT[b]
       }
     }
+    val bytes = ByteArray(3 * plane * 4)
+    ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer().put(values)
     return CanonicalTensor(bytes, geometry)
   }
 
