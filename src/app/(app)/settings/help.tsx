@@ -8,7 +8,6 @@ import { env } from '@/config/env';
 import { colors, fonts } from '@/constants/theme';
 import { INCIDENT_TYPES, TYPE_LABELS, type IncidentType } from '@/domain/incident';
 import { TYPE_ICONS } from '@/domain/type-icons';
-import { onnxRuntimeInstalled } from '@/inference/onnx-engine';
 import { DamageHelpSheet } from '@/ui/damage-help';
 import { Icon, type IconName } from '@/ui/icon';
 import { SettingsRow, SettingsSection } from '@/ui/settings';
@@ -139,24 +138,6 @@ export default function HelpScreen() {
             onPress={() => router.push('/settings/privacy')}
           />
         </SettingsSection>
-
-        {onnxRuntimeInstalled ? (
-          <SettingsSection title="MODELO DE IA">
-            <SettingsRow
-              first
-              icon="speed"
-              title="Medir rendimiento del modelo"
-              subtitle="Latencia de LMD-YOLO en este celular"
-              onPress={() => router.push('/settings/benchmark')}
-            />
-            <SettingsRow
-              icon="timer"
-              title="Prueba de uso continuo"
-              subtitle="15 o 30 minutos seguidos: latencia, memoria y temperatura"
-              onPress={() => router.push('/settings/continuous')}
-            />
-          </SettingsSection>
-        ) : null}
 
         <Text style={styles.version}>ViaDeep · versión {version}</Text>
       </ScrollView>

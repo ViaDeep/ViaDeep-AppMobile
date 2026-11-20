@@ -31,11 +31,6 @@ reporte. ONNX Runtime es código nativo, así que en Expo
 Go no se puede reportar; para usar el modelo se instala el APK de desarrollo (ver más abajo). La foto se puede
 tomar con la cámara o elegir de la galería.
 
-En Perfil > Ayuda y soporte hay dos pantallas para el paper: "Medir rendimiento del modelo" (latencia por foto)
-y "Prueba de uso continuo", que detecta una foto tras otra durante 15 o 30 minutos y cada 30 s anota la memoria
-de la app, la temperatura de la batería y el estado térmico. Guarda el avance cada minuto en el celular, así que
-si la app se cierra a mitad de la prueba se ve cuándo pasó.
-
 El modelo actual es el promedio 50/50 de los pesos de la etapa 10 y la etapa 11 (las dos en la época 50, ajustes
 de la etapa 9 con fotos de calles de Lima tomadas con celular, mezcladas con parte de RDD2022 para no olvidarlo).
 Ese promedio tiene mAP@50 de validación 0,568 en Lima (18 fotos), 0,747 en China y 0,441 en los otros países;
