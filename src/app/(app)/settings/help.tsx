@@ -36,7 +36,7 @@ const FAQ: { question: string; answer: string }[] = [
   {
     question: '¿Qué pasa si la IA no detecta el daño en mi foto?',
     answer:
-      'El tipo de daño lo reconoce el modelo de IA en tu celular. Si no lo encuentra con al menos 50 % de seguridad, toma otra foto más cerca del daño, de día y sin sombras fuertes.',
+      `El tipo de daño lo reconoce el modelo de IA en tu celular. Si no lo encuentra con al menos ${Math.round(env.aiConfidenceThreshold * 100)} % de seguridad, toma otra foto más cerca del daño, de día y sin sombras fuertes.`,
   },
   {
     question: '¿Por qué rechazaron mi reporte?',
