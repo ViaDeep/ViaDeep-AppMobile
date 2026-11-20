@@ -1,5 +1,5 @@
 import { env } from '@/config/env';
-import type { AiResult, IncidentDetail, IncidentSummary, IncidentType, Page } from '@/domain/incident';
+import type { AiResult, DetectedDamage, IncidentDetail, IncidentSummary, IncidentType, Page } from '@/domain/incident';
 
 import { createClient, toApiError } from './http';
 
@@ -11,6 +11,8 @@ export type RegisterIncidentRequest = {
   description?: string;
   aiValidated: boolean;
   aiResult?: AiResult;
+  /** Todas las detecciones de la foto; type y aiResult son la principal. */
+  detections?: DetectedDamage[];
 };
 
 const client = createClient(env.incidentsUrl);

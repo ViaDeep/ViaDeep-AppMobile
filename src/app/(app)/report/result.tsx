@@ -17,7 +17,8 @@ import { usePendingReports } from '@/offline/pending-reports-context';
 import { useReportFlow } from '@/report-flow/report-flow';
 import { useReports } from '@/reports/reports-context';
 import { inferenceEngine } from '@/inference/engine';
-import { acceptedDetection, DESCRIPTION_MAX_LENGTH, noDetectionReason, submitReport } from '@/services/report-service';
+import type { Detection } from '@/inference/inference-engine';
+import { DESCRIPTION_MAX_LENGTH, noDetectionReason, splitDetections, submitReport } from '@/services/report-service';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
 import { DamageHelpButton } from '@/ui/damage-help';
@@ -36,8 +37,9 @@ export default function ResultScreen() {
   }
 
   // El tipo de daño lo reconoce siempre LMD-YOLO: sin una detección sobre el umbral no se puede enviar.
-  const detection = acceptedDetection(flow.detection, env.aiConfidenceThreshold);
-  const percent = detection ? (detection.confidence * 100).toFixed(1) : null;
+  const { accepted, below } = splitDetections(flow.detections, env.aiConfidenceThreshold);
+  const detection = accepted[0] ?? null;
+  const required = Math.round(env.aiConfidenceThreshold * 100);
   const place = capture.address ?? formatCoordinates(capture.coordinates.latitude, capture.coordinates.longitude);
 
   const descriptionError = descriptionProblem(flow.description);
@@ -51,7 +53,7 @@ export default function ResultScreen() {
     setSending(true);
     try {
       const id = await submitReport(
-        { ...capture, detection: flow.detection, description: flow.description },
+        { ...capture, detections: flow.detections, description: flow.description },
         {
           uploadEvidence: evidenceApi.upload,
           registerIncident: incidentApi.register,
@@ -83,7 +85,7 @@ export default function ResultScreen() {
         coordinates: capture.coordinates,
         address: capture.address,
         capturedAt: capture.capturedAt,
-        detection: flow.detection,
+        detections: flow.detections,
         description: flow.description,
       });
     } catch {
@@ -120,17 +122,7 @@ export default function ResultScreen() {
             height={208}
             address={place}
             time={dayAndClock(capture.capturedAt)}
-            box={
-              detection
-                ? {
-                    x: detection.bboxX,
-                    y: detection.bboxY,
-                    width: detection.bboxWidth,
-                    height: detection.bboxHeight,
-                    label: `${TYPE_LABELS[detection.type]} (${percent}%)`,
-                  }
-                : null
-            }
+            boxes={[...accepted.map((d) => hudBox(d, false)), ...below.map((d) => hudBox(d, true))]}
           />
 
           <View style={styles.card}>
@@ -140,7 +132,9 @@ export default function ResultScreen() {
                   <Icon name={detection ? 'policy' : 'search-off'} size={16} color={colors.primary} />
                 </View>
                 <View style={styles.flexShrink}>
-                  <Text style={styles.cardTitle}>{detection ? 'Incidencia detectada' : 'No se detectó un daño'}</Text>
+                  <Text style={styles.cardTitle}>
+                    {!detection ? 'No se detectó un daño' : accepted.length > 1 ? `${accepted.length} daños detectados` : 'Incidencia detectada'}
+                  </Text>
                   <Text style={styles.cardSubtitle}>
                     {detection ? 'Revisión automática de calzada' : 'Toma otra foto para continuar'}
                   </Text>
@@ -155,43 +149,34 @@ export default function ResultScreen() {
               <View style={styles.notice}>
                 <Icon name="info" size={14} color={colors.warningText} />
                 <Text style={styles.noticeText}>
-                  {noDetectionReason(inferenceEngine.available, flow.detection, env.aiConfidenceThreshold)}
+                  {noDetectionReason(inferenceEngine.available, flow.detections, env.aiConfidenceThreshold)}
                 </Text>
               </View>
             )}
 
-            {detection ? (
-              <View style={styles.tiles}>
-                <View style={[styles.tile, styles.tileHalf]}>
-                  <Text style={styles.tileLabel}>Tipo de daño</Text>
-                  <View style={styles.tileValueRow}>
-                    <Icon name={TYPE_ICONS[detection.type]} size={16} color={colors.text} />
-                    <Text style={styles.tileValue}>{TYPE_LABELS[detection.type]}</Text>
-                    <DamageHelpButton type={detection.type} />
-                  </View>
-                </View>
-                <SeverityTile half />
+            {accepted.length > 0 ? (
+              <View style={styles.damages}>
+                <Text style={styles.sectionLabel}>{accepted.length > 1 ? 'Daños detectados' : 'Tipo de daño'}</Text>
+                {accepted.map((d, index) => (
+                  <DamageRow key={index} detection={d} />
+                ))}
               </View>
             ) : null}
 
-            {detection && percent ? (
-              <View style={styles.confidence}>
-                <View style={styles.confidenceRow}>
-                  <View style={styles.confidenceLabel}>
-                    <Icon name="verified" size={14} color={colors.textSecondary} />
-                    <Text style={styles.confidenceText}>Nivel de coincidencia</Text>
-                  </View>
-                  <View style={styles.confidenceValue}>
-                    <Text style={styles.confidenceValueText}>
-                      {percent}% {detection.confidence >= 0.8 ? '(Alta precisión)' : '(Precisión media)'}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.bar}>
-                  <View style={[styles.barFill, { width: `${Math.min(100, detection.confidence * 100)}%` }]} />
-                </View>
+            {below.length > 0 ? (
+              <View style={styles.damages}>
+                <Text style={styles.sectionLabel}>Reconocidos con menos de {required} %</Text>
+                <Text style={styles.sectionHint}>
+                  El modelo también vio estos posibles daños, pero no alcanzaron el mínimo de {required} % de seguridad.
+                  {detection ? ' No cuentan como daños del reporte; se envían solo como referencia.' : ''}
+                </Text>
+                {below.map((d, index) => (
+                  <DamageRow key={index} detection={d} muted />
+                ))}
               </View>
             ) : null}
+
+            {detection ? <SeverityTile /> : null}
 
             <View style={styles.meta}>
               <MetaRow icon="location-on" label="Ubicación validada por GPS" value={place} />
@@ -264,10 +249,45 @@ export default function ResultScreen() {
   );
 }
 
-/** La severidad la asigna la Municipalidad al revisar el reporte, no la app. */
-function SeverityTile({ half = false }: { half?: boolean }) {
+function hudBox(d: Detection, muted: boolean) {
+  return {
+    x: d.bboxX,
+    y: d.bboxY,
+    width: d.bboxWidth,
+    height: d.bboxHeight,
+    label: `${TYPE_LABELS[d.type]} (${(d.confidence * 100).toFixed(1)}%)`,
+    muted,
+  };
+}
+
+/** Un daño con su porcentaje; muted para los que no llegaron al umbral. */
+function DamageRow({ detection, muted = false }: { detection: Detection; muted?: boolean }) {
+  const percent = detection.confidence * 100;
+  const quality = muted ? 'Bajo el mínimo' : detection.confidence >= 0.8 ? 'Alta precisión' : 'Precisión media';
   return (
-    <View style={[styles.tile, half && styles.tileHalf]}>
+    <View style={[styles.confidence, muted && styles.damageMuted]}>
+      <View style={styles.confidenceRow}>
+        <View style={[styles.tileValueRow, styles.flexShrink]}>
+          <Icon name={TYPE_ICONS[detection.type]} size={16} color={muted ? colors.warningText : colors.text} />
+          <Text style={[styles.damageName, muted && styles.damageNameMuted]}>{TYPE_LABELS[detection.type]}</Text>
+          <DamageHelpButton type={detection.type} />
+        </View>
+        <View style={[styles.confidenceValue, muted && styles.confidenceValueMuted]}>
+          <Text style={[styles.confidenceValueText, muted && styles.confidenceValueTextMuted]}>{percent.toFixed(1)}%</Text>
+        </View>
+      </View>
+      <View style={styles.bar}>
+        <View style={[styles.barFill, muted && styles.barFillMuted, { width: `${Math.min(100, percent)}%` }]} />
+      </View>
+      <Text style={[styles.damageQuality, muted && styles.damageQualityMuted]}>{quality}</Text>
+    </View>
+  );
+}
+
+/** La severidad la asigna la Municipalidad al revisar el reporte, no la app. */
+function SeverityTile() {
+  return (
+    <View style={styles.tile}>
       <Text style={styles.tileLabel}>Nivel de severidad</Text>
       <View style={styles.severity}>
         <View style={styles.severityDot} />
@@ -347,7 +367,6 @@ const styles = StyleSheet.create({
   noticeText: { flex: 1, fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.warningText },
   modelChip: { backgroundColor: colors.surfaceBlueSoft, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
   modelChipText: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.6, color: '#001A43' },
-  tiles: { flexDirection: 'row', gap: 10 },
   tile: {
     gap: 4,
     padding: 11,
@@ -356,10 +375,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(197,198,207,0.2)',
     backgroundColor: colors.surfaceMuted,
   },
-  tileHalf: { flex: 1 },
   tileLabel: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
   tileValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  tileValue: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 16, lineHeight: 22, color: colors.text },
   severity: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -383,13 +400,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   confidenceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  confidenceLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  confidenceText: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
   confidenceValue: { backgroundColor: 'rgba(0,39,24,0.1)', borderRadius: 2, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 1 },
   confidenceValueText: { fontFamily: fonts.monoBold, fontSize: 11, lineHeight: 16, letterSpacing: 0.44, color: colors.success },
   bar: { height: 8, borderRadius: 12, backgroundColor: colors.surfaceBlue, overflow: 'hidden' },
   barFill: { height: 8, borderRadius: 12, backgroundColor: colors.success },
   meta: { gap: 8, paddingTop: 4 },
+  damages: { gap: 8 },
+  sectionLabel: { fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
+  sectionHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 17, color: colors.textSecondary },
+  damageMuted: { borderColor: colors.warningBorder, backgroundColor: colors.warningSurface },
+  damageName: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.text },
+  damageNameMuted: { fontFamily: fonts.semibold, color: colors.warningText },
+  damageQuality: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 14, color: colors.success },
+  damageQualityMuted: { color: colors.warningText },
+  confidenceValueMuted: { backgroundColor: 'rgba(245,158,11,0.15)' },
+  confidenceValueTextMuted: { color: colors.warningText },
+  barFillMuted: { backgroundColor: colors.warning },
   metaRow: { flexDirection: 'row', gap: 8 },
   metaLabel: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.textSecondary },
   metaValue: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, color: colors.text },

@@ -19,7 +19,7 @@ function pending(localId: string, overrides: Partial<PendingReport> = {}): Pendi
     coordinates: { latitude: -12.05, longitude: -77.04 },
     address: 'Av. Arequipa 1200, Lince',
     capturedAt: '2026-10-15T10:00:00Z',
-    detection: { type: 'D40', confidence: 0.71, bboxX: 0.1, bboxY: 0.2, bboxWidth: 0.3, bboxHeight: 0.4 },
+    detections: [{ type: 'D40', confidence: 0.71, bboxX: 0.1, bboxY: 0.2, bboxWidth: 0.3, bboxHeight: 0.4 }],
     description: 'Frente al paradero',
     savedAt: '2026-10-15T10:01:00Z',
     ...overrides,
@@ -54,8 +54,17 @@ describe('reportes pendientes de envío', () => {
     expect(toDraft(pending('a'))).toEqual({
       photoUri: 'file:///docs/pending-reports/a.jpg',
       coordinates: { latitude: -12.05, longitude: -77.04 },
-      detection: { type: 'D40', confidence: 0.71, bboxX: 0.1, bboxY: 0.2, bboxWidth: 0.3, bboxHeight: 0.4 },
+      detections: [{ type: 'D40', confidence: 0.71, bboxX: 0.1, bboxY: 0.2, bboxWidth: 0.3, bboxHeight: 0.4 }],
       description: 'Frente al paradero',
     });
+  });
+
+  it('lee los reportes guardados por versiones anteriores, que tenían una sola detección', () => {
+    const { detections, ...old } = pending('viejo');
+    const raw = JSON.stringify([{ ...old, detection: detections[0] }, { ...old, localId: 'sin', detection: null }]);
+    const [first, second] = parsePending(raw);
+    expect(first.detections).toEqual(detections);
+    expect(first).not.toHaveProperty('detection');
+    expect(second.detections).toEqual([]);
   });
 });

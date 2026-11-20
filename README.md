@@ -16,25 +16,25 @@ El diseño sigue los mockups de Figma del proyecto (colores, tipografías Inter 
 - Notificaciones armadas a partir del historial de cada reporte (el backend aún no tiene servicio de avisos).
 
 La detección corre en el celular con LMD-YOLO (`assets/models/lmd-yolo.onnx`) y ONNX Runtime en CPU:
-la foto se encaja en 640 × 640 con el letterbox canónico de LMD-YOLO y de la salida `[1, 8, 8400]` se toma la
-caja de mayor confianza (`src/inference/postprocessing.ts`). La foto se prepara en Kotlin
+la foto se encaja en 640 × 640 con el letterbox canónico de LMD-YOLO y de la salida `[1, 8, 8400]` se toman
+todas las cajas con al menos 25 % de confianza, con supresión de no máximos (NMS) por clase e IoU 0,7, igual que
+Ultralytics (`src/inference/postprocessing.ts`). La foto se prepara en Kotlin
 (`modules/image-tensor/`): decodifica el JPEG, aplica la orientación EXIF y arma el tensor con las mismas
 ecuaciones que `docs/canonical_mobile_preprocessing.md` del repositorio LMD-YOLO. Da el mismo tensor bit a bit
 que `scripts/generate_canonical_mobile_golden.py`. En un APK anterior a ese módulo, la app vuelve al camino
 en JavaScript (`src/inference/preprocessing.ts`), que es más lento. El tipo de
-daño lo reconoce siempre el modelo: si la confianza es menor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD` (0.5 por
-defecto), la app pide tomar otra foto y no deja enviar el reporte. ONNX Runtime es código nativo, así que en Expo
+daño lo reconoce siempre el modelo. Los daños con confianza igual o mayor que `EXPO_PUBLIC_AI_CONFIDENCE_THRESHOLD`
+(0.7 por defecto) son los del reporte: se muestran todos, cada uno con su caja y su porcentaje, y el de mayor
+confianza es el tipo principal. Los que no llegan al umbral se muestran aparte, con borde punteado y su porcentaje,
+y se envían solo como referencia. Si ninguno llega al umbral, la app pide tomar otra foto y no deja enviar el
+reporte. ONNX Runtime es código nativo, así que en Expo
 Go no se puede reportar; para usar el modelo se instala el APK de desarrollo (ver más abajo). La foto se puede
 tomar con la cámara o elegir de la galería.
 
-En Perfil > Ayuda y soporte hay dos pantallas para el paper: "Medir rendimiento del modelo" (latencia por foto)
-y "Prueba de uso continuo", que detecta una foto tras otra durante 15 o 30 minutos y cada 30 s anota la memoria
-de la app, la temperatura de la batería y el estado térmico. Guarda el avance cada minuto en el celular, así que
-si la app se cierra a mitad de la prueba se ve cuándo pasó.
-
-El modelo actual es el de la etapa 10, época 50 (`last.pt`): la etapa 9 ajustada 50 épocas más con fotos de calles de
-Lima tomadas con celular, mezcladas con parte de RDD2022 para no olvidarlo (mAP@50 de validación 0,624 en Lima,
-0,743 en China y 0,443 en los otros países; con la etapa 9 era 0,374 en Lima). Viene del repositorio
+El modelo actual es el promedio 50/50 de los pesos de la etapa 10 y la etapa 11 (las dos en la época 50, ajustes
+de la etapa 9 con fotos de calles de Lima tomadas con celular, mezcladas con parte de RDD2022 para no olvidarlo).
+Ese promedio tiene mAP@50 de validación 0,568 en Lima (18 fotos), 0,747 en China y 0,441 en los otros países;
+la etapa 10 sola tenía 0,552 en esas mismas fotos de Lima. Viene del repositorio
 [ViaDeep/LMD-YOLO](https://github.com/ViaDeep/LMD-YOLO), reparametrizado (DBB en modo deploy) y exportado
 a ONNX FP32 640 sin NMS. Para cambiarlo por otro entrenamiento basta con reemplazar el archivo, siempre
 que mantenga la entrada `[1, 3, 640, 640]`, la salida `[1, 8, 8400]` y las clases D00, D10, D20 y D40.
@@ -99,6 +99,20 @@ eas build --profile development --platform android
 Al terminar, EAS muestra un enlace y un QR para descargar el APK en el celular. Con el APK instalado,
 arranca `npm start` y abre la app ViaDeep (no Expo Go): se conecta a la PC igual que antes. Solo hay que
 volver a armar el APK si se agrega otra librería nativa o se cambia el modelo.
+
+## APK de la demo (servidor en la nube)
+
+El perfil `preview` arma un APK independiente, que no necesita la PC: trae el código y el modelo adentro y se
+conecta al servidor de la demo por https. La dirección del servidor se guarda una sola vez en EAS (no en el
+repositorio):
+
+```bash
+eas env:create --environment preview --name EXPO_PUBLIC_API_URL --value https://DOMINIO --visibility plaintext
+eas build --profile preview --platform android
+```
+
+EAS entrega un enlace para descargar el APK; ese enlace se puede compartir con quien vaya a probar la app.
+Hay que volver a armarlo cuando cambie el código de la app o el modelo.
 
 ## Comandos
 

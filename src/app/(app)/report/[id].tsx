@@ -8,7 +8,7 @@ import { PhotoHud } from '@/components/photo-hud';
 import { placeLabel } from '@/components/report-cards';
 import { colors, fonts } from '@/constants/theme';
 import { citizenStatus, formatDateTime, relativeTime, reportCode, statusPhase, type CitizenStatus } from '@/domain/display';
-import { SEVERITY_LABELS, TYPE_LABELS, type IncidentDetail, type IncidentStatus } from '@/domain/incident';
+import { SEVERITY_LABELS, TYPE_LABELS, type DetectedDamage, type IncidentDetail, type IncidentStatus } from '@/domain/incident';
 import { TYPE_ICONS } from '@/domain/type-icons';
 import { useEvidenceUrl } from '@/reports/use-evidence-url';
 import { addressFor } from '@/services/location';
@@ -69,6 +69,16 @@ export default function ReportDetailScreen() {
   const status = citizenStatus(incident.status, incident.severity);
   const phase = statusPhase(status);
   const ai = incident.aiValidated ? incident.aiResult : null;
+  // Los reportes anteriores a la detección múltiple traen solo la detección principal.
+  const detections: DetectedDamage[] =
+    incident.detections && incident.detections.length > 0
+      ? incident.detections
+      : ai
+        ? [{ ...ai, type: incident.type, accepted: true }]
+        : [];
+  const acceptedTypes = [...new Set(detections.filter((d) => d.accepted).map((d) => d.type))];
+  const types = acceptedTypes.length > 0 ? acceptedTypes : [incident.type];
+  const below = detections.filter((d) => !d.accepted);
   const place = address ?? placeLabel(incident);
   const lastEntry = incident.history[incident.history.length - 1];
 
@@ -88,17 +98,14 @@ export default function ReportDetailScreen() {
           <PhotoHud
             uri={photo}
             height={176}
-            box={
-              ai
-                ? {
-                    x: ai.bboxX,
-                    y: ai.bboxY,
-                    width: ai.bboxWidth,
-                    height: ai.bboxHeight,
-                    label: `${TYPE_LABELS[incident.type].toUpperCase()} ${ai.confidence.toFixed(3)}`,
-                  }
-                : null
-            }>
+            boxes={detections.map((d) => ({
+              x: d.bboxX,
+              y: d.bboxY,
+              width: d.bboxWidth,
+              height: d.bboxHeight,
+              label: `${TYPE_LABELS[d.type].toUpperCase()} ${d.confidence.toFixed(3)}`,
+              muted: !d.accepted,
+            }))}>
             <View style={styles.hudTop}>
               <View style={styles.hudChip}>
                 <Icon name="visibility" size={11} color={colors.white} />
@@ -125,11 +132,19 @@ export default function ReportDetailScreen() {
                 <Icon name={TYPE_ICONS[incident.type]} size={18} color={colors.primary} />
               </View>
               <View style={styles.flexShrink}>
-                <Text style={styles.eyebrow}>TIPO DE DAÑO</Text>
-                <View style={styles.typeTextRow}>
-                  <Text style={styles.typeText}>{TYPE_LABELS[incident.type]}</Text>
-                  <DamageHelpButton type={incident.type} />
-                </View>
+                <Text style={styles.eyebrow}>{types.length > 1 ? 'TIPOS DE DAÑO' : 'TIPO DE DAÑO'}</Text>
+                {types.map((type) => (
+                  <View key={type} style={styles.typeTextRow}>
+                    <Text style={styles.typeText}>{TYPE_LABELS[type]}</Text>
+                    <DamageHelpButton type={type} />
+                  </View>
+                ))}
+                {below.length > 0 ? (
+                  <Text style={styles.belowText}>
+                    También reconocidos bajo el mínimo:{' '}
+                    {below.map((d) => `${TYPE_LABELS[d.type]} ${(d.confidence * 100).toFixed(0)} %`).join(', ')}
+                  </Text>
+                ) : null}
               </View>
             </View>
             <StatusBadge status={status} />
@@ -346,6 +361,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: { fontFamily: fonts.monoBold, fontSize: 10, lineHeight: 14, letterSpacing: 0.5, color: colors.textSecondary },
   typeTextRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  belowText: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.warningText, marginTop: 4 },
   typeText: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 24, color: colors.text },
   metaBlock: { gap: 8, paddingTop: 5, borderTopWidth: 1, borderTopColor: colors.border },
   addressRow: { flexDirection: 'row', gap: 8 },

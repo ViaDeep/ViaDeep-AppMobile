@@ -26,8 +26,8 @@ export default function PreviewScreen() {
     if (!capture) return;
     setAnalyzing(true);
     try {
-      const detection = inferenceEngine.available ? await inferenceEngine.detect(capture.photoUri).catch(() => null) : null;
-      flow.update({ detection });
+      const detections = inferenceEngine.available ? await inferenceEngine.detect(capture.photoUri).catch(() => []) : [];
+      flow.update({ detections });
       router.push('/report/result');
     } finally {
       setAnalyzing(false);

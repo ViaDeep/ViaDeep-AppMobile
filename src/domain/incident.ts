@@ -33,6 +33,14 @@ export type AiResult = {
   bboxHeight: number;
 };
 
+/** Los tipos distintos de una lista de daños, en el orden en que aparecen ("Piel de cocodrilo, Bache"). */
+export function typeListLabel(types: IncidentType[]): string {
+  return [...new Set(types)].map((type) => TYPE_LABELS[type]).join(', ');
+}
+
+/** Un daño que LMD-YOLO reconoció en la foto; accepted indica si superó el umbral de confianza. */
+export type DetectedDamage = AiResult & { type: IncidentType; accepted: boolean };
+
 export type IncidentSummary = {
   id: string;
   type: IncidentType;
@@ -58,6 +66,8 @@ export type IncidentDetail = IncidentSummary & {
   evidenceId: string;
   description: string | null;
   aiResult: AiResult | null;
+  /** Todas las detecciones de la foto (los reportes antiguos traen solo la principal; si el backend no lo envía, vacío). */
+  detections?: DetectedDamage[];
   updatedAt: string;
   history: HistoryEntry[];
   possibleDuplicates: string[];
