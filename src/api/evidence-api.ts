@@ -1,4 +1,4 @@
-import { FileSystemUploadType, getInfoAsync, uploadAsync } from 'expo-file-system/legacy';
+﻿import { FileSystemUploadType, getInfoAsync, uploadAsync } from 'expo-file-system/legacy';
 
 import { env } from '@/config/env';
 
@@ -6,8 +6,8 @@ import { ApiError, createClient, currentToken, notifyUnauthorized, toApiError } 
 
 const client = createClient(env.evidencesUrl);
 
-/** Mismo límite que el servicio de evidencias (EVIDENCE_MAX_SIZE_BYTES). */
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+/** Mismo lÃ­mite que el servicio de evidencias (EVIDENCE_MAX_SIZE_BYTES). */
+const MAX_PHOTO_BYTES = 5000000;
 
 function parseJson(text: string): { id?: string; detail?: string } {
   try {
@@ -25,7 +25,7 @@ export const evidenceApi = {
   async upload(imageUri: string): Promise<string> {
     const info = await getInfoAsync(imageUri).catch(() => null);
     if (info?.exists && info.size > MAX_PHOTO_BYTES) {
-      throw new ApiError('La foto pesa más de 10 MB. Toma otra con menos resolución.', 413);
+      throw new ApiError('La foto pesa más de 5 MB. Toma otra con menos resoluciÃ³n.', 413);
     }
     let response: { status: number; body: string };
     try {
@@ -38,7 +38,7 @@ export const evidenceApi = {
       });
     } catch (error) {
       const reason = error instanceof Error ? ` (${error.message})` : '';
-      throw new ApiError(`No se pudo subir la foto. Revisa tu conexión.${reason}`, undefined, true);
+      throw new ApiError(`No se pudo subir la foto. Revisa tu conexiÃ³n.${reason}`, undefined, true);
     }
     if (response.status === 401) {
       notifyUnauthorized();
@@ -62,3 +62,4 @@ export const evidenceApi = {
     }
   },
 };
+
